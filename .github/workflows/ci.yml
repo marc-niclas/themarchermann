@@ -28,8 +28,23 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Verify
-        run: bun run verify
+      - name: Format and lint
+        run: bun run check
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Audit dependencies
+        run: bun run audit
+
+      - name: Test
+        run: bun run test
+
+      - name: Build
+        run: bun run build
+
+      - name: Smoke test generated site
+        run: bun run smoke
 
   release:
     name: Release
