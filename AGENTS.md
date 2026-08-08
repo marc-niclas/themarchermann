@@ -8,12 +8,15 @@
 - Vitest for tests
 - vanilla-extract and native CSS; do not add Tailwind
 - semantic-release with Conventional Commits
-- Firebase Hosting through keyless GitHub OIDC; never add a service-account key
+- Firebase Hosting through claim-constrained keyless GitHub OIDC; never add a service-account key
 
 ## Development
 
 - Install with `bun install`; do not introduce npm, pnpm, or Yarn lockfiles.
 - Respect `bunfig.toml`: dependencies must be at least seven days old.
+- Keep Firebase CLI exact-pinned in `bun.lock`; deployment must use its installed binary, never runtime `bunx` resolution.
+- Keep preview and production in separate Firebase projects and identities. Production must use the protected GitHub environment and a `main`-only WIF provider.
+- Deploy the artifact uploaded after the quality job's smoke test; never rebuild in a deployment job.
 - Run `bun run verify` before committing or pushing.
 - Keep generated output (`dist/`, `.astro/`, coverage) out of source and Biome checks.
 - Use test-first development for behavior changes.

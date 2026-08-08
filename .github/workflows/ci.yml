@@ -46,6 +46,14 @@ jobs:
       - name: Smoke test generated site
         run: bun run smoke
 
+      - name: Upload verified site artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: site-${{ github.sha }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
+
   release:
     name: Release
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -99,31 +107,44 @@ jobs:
         with:
           bun-version: 1.3.12
 
-      - name: Install dependencies
+      - name: Install locked deployment tooling
         run: bun install --frozen-lockfile
 
-      - name: Build
-        run: bun run build
+      - name: Download verified site artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: site-${{ github.sha }}
+          path: dist
 
-      - name: Authenticate to Google Cloud
+      - name: Prepare isolated preview configuration
+        run: >-
+          jq '{hosting: ((.hosting | {headers, cleanUrls, trailingSlash}) +
+          {site: "themarchermann-preview", public: "dist"})}'
+          firebase.json > /tmp/firebase.preview.json
+
+      - name: Authenticate to isolated preview project
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
-          workload_identity_provider: projects/958725563449/locations/global/workloadIdentityPools/github/providers/github
-          service_account: github-deployer@themarchermann-site.iam.gserviceaccount.com
+          workload_identity_provider: projects/415482766113/locations/global/workloadIdentityPools/github-preview/providers/github-preview
+          service_account: github-preview-deployer@themarchermann-preview.iam.gserviceaccount.com
 
       - name: Deploy preview channel
         run: >-
-          bun run firebase:preview --
-          pr-${{ github.event.number }}
-          --project themarchermann-site
+          ./node_modules/.bin/firebase hosting:channel:deploy
+          pr-${{ github.event.pull_request.number }}
+          --config /tmp/firebase.preview.json
+          --project themarchermann-preview
           --expires 7d
           --non-interactive
 
   deploy:
     name: Deploy production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: quality
+    needs:
+      - quality
+      - release
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
       id-token: write
@@ -136,17 +157,24 @@ jobs:
         with:
           bun-version: 1.3.12
 
-      - name: Install dependencies
+      - name: Install locked deployment tooling
         run: bun install --frozen-lockfile
 
-      - name: Build
-        run: bun run build
+      - name: Download verified site artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: site-${{ github.sha }}
+          path: dist
 
-      - name: Authenticate to Google Cloud
+      - name: Authenticate to production
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
-          workload_identity_provider: projects/958725563449/locations/global/workloadIdentityPools/github/providers/github
-          service_account: github-deployer@themarchermann-site.iam.gserviceaccount.com
+          workload_identity_provider: projects/958725563449/locations/global/workloadIdentityPools/github-production/providers/github-production
+          service_account: github-production-deployer@themarchermann-site.iam.gserviceaccount.com
 
       - name: Deploy live channel
-        run: bun run firebase:deploy -- --project themarchermann-site --non-interactive
+        run: >-
+          ./node_modules/.bin/firebase deploy
+          --only hosting
+          --project themarchermann-site
+          --non-interactive
