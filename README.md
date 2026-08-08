@@ -28,6 +28,7 @@ bun install
 bun run dev
 bun run check
 bun run typecheck
+bun run audit
 bun run test
 bun run build
 bun run verify
