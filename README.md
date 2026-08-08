@@ -24,7 +24,8 @@ the fix for GHSA-2v37-7h3g-55p8.
 The deploy-only Firebase CLI graph has two additional documented exceptions:
 
 - `hono` is exempted from the age gate and overridden to security-fixed `4.12.34`.
-- `@opentelemetry/core@1.30.1` is ignored as Bun advisory `1120821`. The advisory affects
+- `@opentelemetry/core@1.30.1` is ignored as Bun advisory `1120821`
+  ([GHSA-8988-4f7v-96qf](https://github.com/advisories/GHSA-8988-4f7v-96qf)). The advisory affects
   W3C Baggage propagation, while this package is present only under Firebase CLI's unused
   Pub/Sub tooling; no patched `1.x` release exists. All other advisories remain fatal.
 
