@@ -19,11 +19,15 @@
           {
             "key": "Permissions-Policy",
             "value": "camera=(), microphone=(), geolocation=()"
+          },
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; upgrade-insecure-requests"
           }
         ]
       },
       {
-        "source": "**/*.@(css|js|svg|ico)",
+        "source": "**/*.@(css|js)",
         "headers": [
           {
             "key": "Cache-Control",
