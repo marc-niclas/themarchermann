@@ -8,6 +8,7 @@
 - Vitest for tests
 - vanilla-extract and native CSS; do not add Tailwind
 - semantic-release with Conventional Commits
+- Firebase Hosting through keyless GitHub OIDC; never add a service-account key
 
 ## Development
 
