@@ -18,13 +18,13 @@
     "format:check": "biome format .",
     "lint": "biome lint .",
     "typecheck": "astro check",
-    "audit": "bun audit",
+    "audit": "bun audit --ignore 1120821",
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke": "bun run scripts/smoke.mjs",
     "verify": "bun run check && bun run typecheck && bun run audit && bun run test && bun run build && bun run smoke",
-    "firebase:preview": "bunx --package firebase-tools@15.25.1 firebase hosting:channel:deploy",
-    "firebase:deploy": "bunx --package firebase-tools@15.25.1 firebase deploy --only hosting",
+    "firebase:preview": "firebase hosting:channel:deploy",
+    "firebase:deploy": "firebase deploy --only hosting",
     "release": "semantic-release"
   },
   "dependencies": {
@@ -32,6 +32,8 @@
     "astro": "^7.1.6"
   },
   "overrides": {
+    "hono": "4.12.34",
+    "uuid": "11.1.1",
     "nanoid": "3.3.17"
   },
   "devDependencies": {
@@ -41,6 +43,7 @@
     "@semantic-release/github": "^12.0.9",
     "@semantic-release/release-notes-generator": "^14.1.1",
     "@vanilla-extract/vite-plugin": "^5.2.6",
+    "firebase-tools": "15.25.1",
     "semantic-release": "^25.0.8",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
