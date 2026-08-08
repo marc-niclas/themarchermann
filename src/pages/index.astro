@@ -1,0 +1,31 @@
+---
+import { site } from "../config/site";
+import * as styles from "../styles/global.css";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={site.description} />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#08090c" />
+    <link rel="canonical" href={site.url} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={site.title} />
+    <meta property="og:description" content={site.description} />
+    <meta property="og:url" content={site.url} />
+    <title>{site.title}</title>
+  </head>
+  <body>
+    <main class={styles.main}>
+      <section class={styles.content} aria-labelledby="page-title">
+        <p class={styles.domain}>themarchermann.com</p>
+        <h1 id="page-title" class={styles.heading}>{site.status}</h1>
+        <span class={styles.accent} aria-hidden="true"></span>
+      </section>
+    </main>
+  </body>
+</html>
