@@ -22,7 +22,7 @@ Initialize the public portfolio repository with a deployable but deliberately mi
 - `bun run typecheck`
 - `bun run test`
 - `bun run build`
-- browser/HTTP smoke confirms the under-construction page
+- automated HTTP smoke confirms the generated under-construction page, metadata, favicon, and 404 behavior
 - GitHub Actions passes on `main`
 - semantic-release creates the initial GitHub release
 

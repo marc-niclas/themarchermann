@@ -31,10 +31,11 @@ bun run typecheck
 bun run audit
 bun run test
 bun run build
+bun run smoke
 bun run verify
 ```
 
-`bun run verify` is the local equivalent of the CI quality gate.
+`bun run verify` is the local equivalent of the CI quality gate. It builds and serves the generated site on an ephemeral loopback port, then checks the rendered heading, metadata, reduced-motion CSS, favicon, and 404 behavior over HTTP.
 
 ## Releases
 

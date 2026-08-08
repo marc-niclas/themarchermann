@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import { site } from "./site";
 
 describe("site metadata", () => {
-  it("publishes the temporary construction state for Marc Hermann", () => {
-    expect(site.name).toBe("Marc Hermann");
-    expect(site.title).toBe("Marc Hermann — Under Construction");
-    expect(site.status).toBe("Under construction.");
-    expect(site.url).toBe("https://themarchermann.com");
+  it("stays internally consistent and production-safe", () => {
+    const url = new URL(site.url);
+    const normalizedStatus = site.status.replace(/\.$/, "").toLowerCase();
+
+    expect(url.protocol).toBe("https:");
+    expect(url.pathname).toBe("/");
+    expect(site.title).toContain(site.name);
+    expect(site.description.toLowerCase()).toContain(normalizedStatus);
   });
 });
