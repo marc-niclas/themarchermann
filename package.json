@@ -23,6 +23,8 @@
     "test:watch": "vitest",
     "smoke": "bun run scripts/smoke.mjs",
     "verify": "bun run check && bun run typecheck && bun run audit && bun run test && bun run build && bun run smoke",
+    "firebase:preview": "bunx --package firebase-tools@15.25.1 firebase hosting:channel:deploy",
+    "firebase:deploy": "bunx --package firebase-tools@15.25.1 firebase deploy --only hosting",
     "release": "semantic-release"
   },
   "dependencies": {
