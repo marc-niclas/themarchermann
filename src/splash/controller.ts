@@ -20,6 +20,40 @@ export function getImpactPoint(
   };
 }
 
+export interface PersistentRenderer {
+  readonly start: () => void;
+  readonly stop: () => void;
+}
+
+export function createPersistentRenderer(
+  render: (time: number) => void,
+  requestFrame: (callback: FrameRequestCallback) => number = window.requestAnimationFrame.bind(
+    window,
+  ),
+  cancelFrame: (handle: number) => void = window.cancelAnimationFrame.bind(window),
+): PersistentRenderer {
+  let active = false;
+  let frame = 0;
+  const tick: FrameRequestCallback = (time) => {
+    if (!active) return;
+    render(time);
+    frame = requestFrame(tick);
+  };
+
+  return {
+    start: () => {
+      if (active) return;
+      active = true;
+      frame = requestFrame(tick);
+    },
+    stop: () => {
+      if (!active) return;
+      active = false;
+      cancelFrame(frame);
+    },
+  };
+}
+
 export interface ResizeAbortActions {
   readonly resizeParticles: () => void;
   readonly stopTimeline: () => void;
@@ -62,6 +96,7 @@ export function startSignatureSplash(root: HTMLElement): () => void {
   const marcDash = requireElement<HTMLElement>(root, '[data-projectile="marc-dash"]');
   const hermannDash = requireElement<HTMLElement>(root, '[data-projectile="hermann-dash"]');
   const emitter = new ParticleEmitter(canvas);
+  const fireRenderer = createPersistentRenderer((time) => emitter.render(time));
   const timeline = gsap.timeline({ defaults: { ease: "none" } });
 
   const travel = (projectile: HTMLElement, direction: "left-to-right" | "right-to-left") =>
@@ -110,9 +145,10 @@ export function startSignatureSplash(root: HTMLElement): () => void {
     gsap.set(hermann, { clipPath: `inset(0 0 0 ${100 - revealed * 100}%)` });
   };
 
-  const ignite = (word: HTMLElement, target: HTMLElement, direction: -1 | 1) => {
+  const ignite = (id: string, word: HTMLElement, target: HTMLElement) => {
     const point = getImpactPoint(word.getBoundingClientRect(), target.getBoundingClientRect());
-    emitter.emit(point.x, point.y, "kindle", direction);
+    emitter.anchorFlame(id, point.x, point.y);
+    fireRenderer.start();
   };
 
   let marcIgnited = false;
@@ -125,14 +161,13 @@ export function startSignatureSplash(root: HTMLElement): () => void {
         x: marcTravel.toX,
         duration: spec.passes[0]?.duration ?? 0,
         onUpdate: () => {
-          emitter.render();
           revealMarc();
           if (!marcIgnited) {
             const dashBounds = marcDash.getBoundingClientRect();
             const impactBounds = marcImpact.getBoundingClientRect();
             if (dashBounds.left >= impactBounds.left) {
               marcIgnited = true;
-              ignite(marc, marcImpact, 1);
+              ignite("marc-c", marc, marcImpact);
             }
           }
         },
@@ -145,7 +180,6 @@ export function startSignatureSplash(root: HTMLElement): () => void {
         x: hermannTravel.toX,
         duration: spec.passes[1]?.duration ?? 0,
         onUpdate: () => {
-          emitter.render();
           revealHermann();
           const bounds = hermannDash.getBoundingClientRect();
           emitter.emit(bounds.right, dashCenterY(hermannDash), "flame", 1);
@@ -153,7 +187,7 @@ export function startSignatureSplash(root: HTMLElement): () => void {
             const impactBounds = hermannImpact.getBoundingClientRect();
             if (bounds.right <= impactBounds.right) {
               hermannIgnited = true;
-              ignite(hermann, hermannImpact, -1);
+              ignite("hermann-r", hermann, hermannImpact);
             }
           }
         },
@@ -162,20 +196,14 @@ export function startSignatureSplash(root: HTMLElement): () => void {
         },
       },
       spec.passes[1]?.startsAt ?? 0,
-    )
-    .to(
-      {},
-      {
-        duration: spec.effectsEndAt - spec.readableAt,
-        onUpdate: () => emitter.render(),
-        onComplete: () => emitter.clear(),
-      },
-      spec.readableAt,
     );
 
   const onResize = createResizeAbortHandler({
     resizeParticles: () => emitter.resize(),
-    stopTimeline: () => timeline.kill(),
+    stopTimeline: () => {
+      timeline.kill();
+      fireRenderer.stop();
+    },
     revealWords: () => gsap.set([marc, hermann], { clipPath: "inset(0 0 0 0)" }),
     hideProjectiles: () => gsap.set([marcDash, hermannDash], { autoAlpha: 0 }),
     clearParticles: () => emitter.clear(),
@@ -184,6 +212,7 @@ export function startSignatureSplash(root: HTMLElement): () => void {
 
   return () => {
     timeline.kill();
+    fireRenderer.stop();
     emitter.clear();
     window.removeEventListener("resize", onResize);
   };

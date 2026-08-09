@@ -1,5 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
-import { createResizeAbortHandler, getImpactPoint } from "./controller";
+import { createPersistentRenderer, createResizeAbortHandler, getImpactPoint } from "./controller";
+
+describe("signature splash persistent fire renderer", () => {
+  it("keeps rendering anchored fire until explicitly stopped", () => {
+    const render = vi.fn();
+    const queued: FrameRequestCallback[] = [];
+    const cancelFrame = vi.fn();
+    const renderer = createPersistentRenderer(
+      render,
+      (callback: FrameRequestCallback) => {
+        queued.push(callback);
+        return queued.length;
+      },
+      cancelFrame,
+    );
+
+    renderer.start();
+    expect(queued).toHaveLength(1);
+    queued[0]?.(16);
+    expect(render).toHaveBeenCalledOnce();
+    expect(queued).toHaveLength(2);
+
+    renderer.stop();
+    expect(cancelFrame).toHaveBeenCalledWith(2);
+  });
+});
 
 describe("signature splash impact geometry", () => {
   it("anchors fire to the word baseline instead of the nested letter line box", () => {

@@ -18,8 +18,9 @@ export interface SplashSpec {
   readonly passes: readonly SplashPass[];
   readonly initialVisibility: Readonly<Record<"THE" | SplashWord, number>>;
   readonly particlesEnabled: boolean;
+  readonly persistentIgnition: boolean;
   readonly readableAt: number;
-  readonly effectsEndAt: number;
+  readonly effectsEndAt: number | null;
 }
 
 export interface TravelGeometry {
@@ -32,7 +33,6 @@ const HOLD = 0.16;
 const GAP = 0.05;
 const MARC_DURATION = 0.22;
 const HERMANN_DURATION = 0.3;
-const PARTICLE_DECAY = 0.5;
 
 export function getOffscreenTravel(
   direction: PassDirection,
@@ -53,6 +53,7 @@ export function createSplashSpec(reducedMotion: boolean): SplashSpec {
       passes: [],
       initialVisibility: { THE: 1, MARC: 1, HERMANN: 1 },
       particlesEnabled: false,
+      persistentIgnition: false,
       readableAt: 0,
       effectsEndAt: 0,
     };
@@ -86,7 +87,8 @@ export function createSplashSpec(reducedMotion: boolean): SplashSpec {
     passes: [marc, hermann],
     initialVisibility: { THE: 1, MARC: 0, HERMANN: 0 },
     particlesEnabled: true,
+    persistentIgnition: true,
     readableAt,
-    effectsEndAt: readableAt + PARTICLE_DECAY,
+    effectsEndAt: null,
   };
 }

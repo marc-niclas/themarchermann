@@ -41,15 +41,16 @@ try {
   assert.match(html, />The Marc Hermann<\/span>/);
   assert.match(
     html,
-    /data-word="MARC"[^>]*data-texture="soot"[^>]*>MAR<span data-impact="C">C<\/span>/,
+    /data-word="MARC"[^>]*data-texture="soot-patches"[^>]*>MAR<span data-impact="C">C<\/span>/,
   );
   assert.match(
     html,
-    /data-word="HERMANN"[^>]*data-texture="soot"[^>]*>HE<span data-impact="R">R<\/span>MANN/,
+    /data-word="HERMANN"[^>]*data-texture="soot-patches"[^>]*>HE<span data-impact="R">R<\/span>MANN/,
   );
   assert.match(html, /data-projectile="marc-dash"[^>]*data-track="baseline"/);
   assert.match(html, /data-projectile="hermann-dash"[^>]*data-track="baseline"/);
   assert.match(html, /width:clamp\(3\.5rem,9vw,7rem\)/);
+  assert.match(html, /font-size:clamp\(3\.8rem,13\.5vw,11\.25rem\)/);
   assert.match(html, /<canvas[^>]*data-particles[^>]*aria-hidden="true"/);
   assert.match(
     html,

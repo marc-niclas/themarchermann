@@ -43,7 +43,7 @@ export const heading = style({
   flexDirection: "column",
   alignItems: "flex-start",
   margin: 0,
-  fontSize: "clamp(3.45rem, 12.5vw, 10.5rem)",
+  fontSize: "clamp(3.8rem, 13.5vw, 11.25rem)",
   fontWeight: 900,
   letterSpacing: "-0.075em",
   lineHeight: 0.72,
@@ -71,7 +71,7 @@ export const theWord = style({
 const sootTexture = {
   color: "#747570",
   backgroundImage:
-    "radial-gradient(ellipse at 12% 26%, rgba(39,41,38,0.9) 0 0.8%, transparent 3.3%), radial-gradient(ellipse at 37% 71%, rgba(49,51,47,0.82) 0 0.7%, transparent 2.7%), radial-gradient(ellipse at 66% 29%, rgba(34,36,34,0.8) 0 0.6%, transparent 2.5%), radial-gradient(ellipse at 88% 69%, rgba(44,46,43,0.85) 0 0.9%, transparent 3.1%), repeating-linear-gradient(103deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 17px), linear-gradient(180deg, #8b8c86 0%, #747570 48%, #60625e 100%)",
+    "radial-gradient(ellipse at 24% 48%, rgba(25,27,25,0.82) 0 2.2%, rgba(35,37,34,0.58) 3.8%, transparent 7.2%), radial-gradient(ellipse at 73% 63%, rgba(29,31,28,0.78) 0 1.8%, rgba(42,44,40,0.48) 3.4%, transparent 6.5%), radial-gradient(ellipse at 12% 26%, rgba(39,41,38,0.9) 0 0.8%, transparent 3.3%), radial-gradient(ellipse at 37% 71%, rgba(49,51,47,0.82) 0 0.7%, transparent 2.7%), radial-gradient(ellipse at 66% 29%, rgba(34,36,34,0.8) 0 0.6%, transparent 2.5%), radial-gradient(ellipse at 88% 69%, rgba(44,46,43,0.85) 0 0.9%, transparent 3.1%), repeating-linear-gradient(103deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 17px), linear-gradient(180deg, #8b8c86 0%, #747570 48%, #60625e 100%)",
   backgroundClip: "text",
   WebkitBackgroundClip: "text",
   WebkitTextFillColor: "transparent",
