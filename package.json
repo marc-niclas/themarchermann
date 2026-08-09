@@ -29,7 +29,8 @@
   },
   "dependencies": {
     "@vanilla-extract/css": "^1.21.2",
-    "astro": "^7.1.6"
+    "astro": "^7.1.6",
+    "gsap": "3.13.0"
   },
   "overrides": {
     "hono": "4.12.34",

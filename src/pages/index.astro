@@ -10,7 +10,7 @@ import * as styles from "../styles/global.css";
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={site.description} />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#08090c" />
+    <meta name="theme-color" content="#090a0a" />
     <link rel="canonical" href={site.url} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:type" content="website" />
@@ -21,11 +21,24 @@ import * as styles from "../styles/global.css";
   </head>
   <body>
     <main class={styles.main}>
-      <section class={styles.content} aria-labelledby="page-title">
-        <p class={styles.domain}>themarchermann.com</p>
-        <h1 id="page-title" class={styles.heading}>{site.status}</h1>
-        <span class={styles.accent} aria-hidden="true"></span>
+      <section class={styles.splash} data-signature-splash aria-labelledby="signature-title">
+        <h1 id="signature-title" class={styles.heading}>
+          <span class={styles.screenReaderText}>The Marc Hermann</span>
+          <span class={styles.visualWords} aria-hidden="true">
+            <span class={`${styles.word} ${styles.theWord}`}>THE</span>
+            <span class={`${styles.word} ${styles.marcWord}`} data-word="MARC">MARC</span>
+            <span class={`${styles.word} ${styles.hermannWord}`} data-word="HERMANN">HERMANN</span>
+          </span>
+        </h1>
+        <span class={`${styles.projectile} ${styles.marcDash}`} data-projectile="marc-dash" aria-hidden="true"></span>
+        <span class={`${styles.projectile} ${styles.hermannDash}`} data-projectile="hermann-dash" aria-hidden="true"></span>
+        <canvas class={styles.particles} data-particles aria-hidden="true"></canvas>
       </section>
+      <p class={styles.cornerMark} aria-hidden="true">M / H — 2026</p>
     </main>
+    <script>
+      import "../splash/init";
+    </script>
+    <noscript><style is:global>[data-word]{clip-path:none!important}</style></noscript>
   </body>
 </html>

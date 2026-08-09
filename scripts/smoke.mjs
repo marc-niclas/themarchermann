@@ -36,10 +36,20 @@ try {
   assert.equal(pageResponse.status, 200);
   assert.match(pageResponse.headers.get("content-type") ?? "", /^text\/html/);
   assert.match(html, /<title>Marc Hermann — Under Construction<\/title>/);
-  assert.match(html, /<h1[^>]*>Under construction\.<\/h1>/);
+  assert.match(html, /<h1[^>]*id="signature-title"[^>]*>/);
+  assert.match(html, />The Marc Hermann<\/span>/);
+  assert.match(html, /data-word="MARC">MARC<\/span>/);
+  assert.match(html, /data-word="HERMANN">HERMANN<\/span>/);
+  assert.match(html, /data-projectile="marc-dash"/);
+  assert.match(html, /data-projectile="hermann-dash"/);
+  assert.match(html, /<canvas[^>]*data-particles[^>]*aria-hidden="true"/);
+  assert.match(
+    html,
+    /<noscript><style>\[data-word\]\{clip-path:none!important\}<\/style><\/noscript>/,
+  );
+  assert.match(html, /data-motion=reduced/);
   assert.match(html, /<link rel="canonical" href="https:\/\/themarchermann\.com">/);
   assert.match(html, /<meta name="robots" content="noindex, nofollow">/);
-  assert.match(html, /prefers-reduced-motion:no-preference/);
   assert.doesNotMatch(html, /Astro Starter Kit/i);
 
   const faviconResponse = await fetch(new URL("/favicon.svg", server.url));
