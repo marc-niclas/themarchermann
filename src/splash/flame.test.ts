@@ -12,6 +12,8 @@ import {
   applyDrag,
   buoyantAcceleration,
   createArcFlameSeat,
+  createHeelFlameSeat,
+  createOutlineFlameSeat,
   createSeamFlameSeat,
   curlAcceleration,
   drainSpawnBudget,
@@ -35,6 +37,11 @@ import {
   IGNITION_SETTLE,
   ignitionEnvelope,
   ignitionGain,
+  OUTLINE_BOTTOM_SITE_COUNT,
+  OUTLINE_CORNER_SITE_COUNT,
+  OUTLINE_FUEL,
+  OUTLINE_RISE,
+  OUTLINE_SIDE_SITE_COUNT,
   parcelSpread,
   pickFlameSite,
   SEAM_HEIGHT,
@@ -253,6 +260,58 @@ describe("HERMANN seam flame seat", () => {
 
   it("flickers out of step with the MARC seat", () => {
     expect(seat.phase).not.toBeCloseTo(createArcFlameSeat(marcWord, marcLetter).phase, 3);
+  });
+});
+
+describe("H heel flame seat", () => {
+  const letter = { left: 50, right: 132, top: 400, bottom: 500 };
+  const seat = createHeelFlameSeat(hermannWord, letter);
+
+  it("briefly burns only along the lower-left edge of the H", () => {
+    expect(seat.sites.length).toBeGreaterThanOrEqual(4);
+    for (const item of seat.sites) {
+      expect(item.x).toBeGreaterThanOrEqual(letter.left - 1);
+      expect(item.x).toBeLessThan(letter.left + (letter.right - letter.left) * 0.38);
+      expect(item.y).toBeGreaterThanOrEqual(hermannWord.bottom - capHeight(hermannWord) * 0.16);
+      expect(item.y).toBeLessThanOrEqual(hermannWord.bottom + 1);
+    }
+  });
+});
+
+describe("About outline flame seat", () => {
+  const outline = { left: 50, right: 214, top: 570, bottom: 614 };
+  const seat = createOutlineFlameSeat(outline);
+
+  it("follows the rounded sides and bottom while leaving the top edge clear", () => {
+    expect(seat.sites).toHaveLength(
+      OUTLINE_BOTTOM_SITE_COUNT + OUTLINE_CORNER_SITE_COUNT * 2 + OUTLINE_SIDE_SITE_COUNT * 2,
+    );
+    for (const item of seat.sites) {
+      expect(item.y).toBeGreaterThanOrEqual(outline.bottom - (outline.bottom - outline.top) * 0.42);
+      expect(item.y).toBeLessThanOrEqual(outline.bottom);
+    }
+
+    const roundedCorners = seat.sites.filter(
+      (item) =>
+        item.x > outline.left + 1 && item.x < outline.right - 1 && item.y < outline.bottom - 1,
+    );
+    expect(roundedCorners).toHaveLength((OUTLINE_CORNER_SITE_COUNT - 2) * 2);
+  });
+
+  it("feeds a low dense smolder with stronger lower corners", () => {
+    const bottom = seat.sites.filter((item) => Math.abs(item.y - outline.bottom) < 1);
+    expect(bottom.length).toBeGreaterThanOrEqual(OUTLINE_BOTTOM_SITE_COUNT);
+    expect(OUTLINE_BOTTOM_SITE_COUNT).toBeGreaterThan(OUTLINE_SIDE_SITE_COUNT * 2);
+    expect(seat.fuel).toBe(OUTLINE_FUEL);
+    expect(seat.fuel).toBeGreaterThan(1.5);
+    expect(seat.rise).toBe(OUTLINE_RISE);
+    expect(seat.rise).toBeLessThan(0.3);
+
+    const middle = bottom[Math.floor(bottom.length / 2)];
+    const corner = seat.sites.find(
+      (item) => Math.abs(item.x - outline.left) < 1 && item.y < outline.bottom,
+    );
+    expect(middle?.flare).toBeLessThan(corner?.flare ?? 0);
   });
 });
 

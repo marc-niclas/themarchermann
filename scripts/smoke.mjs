@@ -45,7 +45,7 @@ try {
   );
   assert.match(
     html,
-    /data-word="HERMANN"[^>]*data-texture="soot-patches"[^>]*>HE<span data-impact="R">R<\/span>MANN/,
+    /data-word="HERMANN"[^>]*data-texture="soot-patches"[^>]*><span data-ember-source>H<\/span>E<span data-impact="R">R<\/span>MANN/,
   );
   assert.match(html, /data-projectile="marc-dash"[^>]*data-track="baseline"/);
   assert.match(html, /data-projectile="hermann-dash"[^>]*data-track="baseline"/);

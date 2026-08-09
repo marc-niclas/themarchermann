@@ -27,10 +27,11 @@ import * as styles from "../styles/global.css";
           <span class={styles.visualWords} aria-hidden="true">
             <span class={`${styles.word} ${styles.theWord}`}>THE</span>
             <span class={`${styles.word} ${styles.marcWord}`} data-word="MARC" data-texture="soot-patches">MAR<span data-impact="C">C</span></span>
-            <span class={`${styles.word} ${styles.hermannWord}`} data-word="HERMANN" data-texture="soot-patches">HE<span data-impact="R">R</span>MANN</span>
+            <span class={`${styles.word} ${styles.hermannWord}`} data-word="HERMANN" data-texture="soot-patches"><span data-ember-source>H</span>E<span data-impact="R">R</span>MANN</span>
           </span>
         </h1>
         <a class={styles.aboutButton} href="#about" data-about-button data-lit="false">
+          <span class={styles.aboutOutline} data-about-outline aria-hidden="true"></span>
           <span class={styles.aboutLabel}>About me</span>
           <svg class={styles.aboutArrow} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 4v15" />

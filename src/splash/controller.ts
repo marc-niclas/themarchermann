@@ -2,7 +2,15 @@ import { gsap } from "gsap";
 import { createSplashSpec, getOffscreenTravel } from "./choreography";
 import { createScaledClock } from "./debug";
 import { createDustBurst, DUST_ON_HERMANN, DUST_ON_MARC } from "./dust";
-import { createArcFlameSeat, createSeamFlameSeat, FLAME_TIME_SCALE, type FlameSeat } from "./flame";
+import {
+  createArcFlameSeat,
+  createHeelFlameSeat,
+  createOutlineFlameSeat,
+  createSeamFlameSeat,
+  FLAME_TIME_SCALE,
+  type FlameBounds,
+  type FlameSeat,
+} from "./flame";
 import { ParticleEmitter } from "./particles";
 import { createShockwaveRenderer } from "./shockwave";
 
@@ -11,6 +19,29 @@ const OVERSCAN = 32;
 export interface SplashOptions {
   /** 1 is full speed; smaller values slow the pass down for inspection. */
   readonly timeScale?: number;
+}
+
+/** How far the page has been scrolled, in CSS pixels. */
+export interface ScrollOffset {
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * Lifts a rect measured against the viewport into document space.
+ *
+ * Particles are captured off the type with `getBoundingClientRect`, which is
+ * viewport relative, but they have to be stored against the document: the page
+ * scrolls and the fire belongs to the letter, not to the screen. The emitter
+ * draws its world back through the same offset.
+ */
+export function toDocumentBounds(bounds: FlameBounds, scroll: ScrollOffset): FlameBounds {
+  return {
+    left: bounds.left + scroll.x,
+    right: bounds.right + scroll.x,
+    top: bounds.top + scroll.y,
+    bottom: bounds.bottom + scroll.y,
+  };
 }
 
 export interface PersistentRenderer {
@@ -53,6 +84,7 @@ export interface ResizeAbortActions {
   readonly revealWords: () => void;
   readonly hideProjectiles: () => void;
   readonly clearParticles: () => void;
+  readonly revealAbout: () => void;
 }
 
 export function createResizeAbortHandler(actions: ResizeAbortActions): () => void {
@@ -66,6 +98,7 @@ export function createResizeAbortHandler(actions: ResizeAbortActions): () => voi
     actions.revealWords();
     actions.hideProjectiles();
     actions.clearParticles();
+    actions.revealAbout();
   };
 }
 
@@ -87,6 +120,9 @@ export function startSignatureSplash(root: HTMLElement, options: SplashOptions =
   const hermann = requireElement<HTMLElement>(root, '[data-word="HERMANN"]');
   const marcImpact = requireElement<HTMLElement>(marc, '[data-impact="C"]');
   const hermannImpact = requireElement<HTMLElement>(hermann, '[data-impact="R"]');
+  const hermannHeel = requireElement<HTMLElement>(hermann, "[data-ember-source]");
+  const aboutButton = requireElement<HTMLElement>(root, "[data-about-button]");
+  const aboutOutline = requireElement<HTMLElement>(aboutButton, "[data-about-outline]");
   const marcDash = requireElement<HTMLElement>(root, '[data-projectile="marc-dash"]');
   const hermannDash = requireElement<HTMLElement>(root, '[data-projectile="hermann-dash"]');
   const emitter = new ParticleEmitter(canvas);
@@ -103,6 +139,16 @@ export function startSignatureSplash(root: HTMLElement, options: SplashOptions =
   /** The emitter already holds this context, transform and all; 2D contexts are per-canvas singletons. */
   const shockContext = canvas.getContext("2d");
 
+  /**
+   * Cached so the draw never has to read layout. The emitter's world is in
+   * document space; this is the window onto it.
+   */
+  let scrolled: ScrollOffset = { x: window.scrollX, y: window.scrollY };
+  const onScroll = () => {
+    scrolled = { x: window.scrollX, y: window.scrollY };
+  };
+  window.addEventListener("scroll", onScroll, { passive: true });
+
   let lastScaled = 0;
   let clockStarted = false;
   const fireRenderer = createPersistentRenderer((time) => {
@@ -110,8 +156,10 @@ export function startSignatureSplash(root: HTMLElement, options: SplashOptions =
     const delta = clockStarted ? Math.min((scaled - lastScaled) / 1000, 0.05) : 0;
     clockStarted = true;
     lastScaled = scaled;
-    // The emitter clears the canvas, so the shockwave has to draw after it.
-    emitter.render(flameClock(time));
+    // The emitter clears the canvas, so the shockwave has to draw after it. It
+    // tracks a fixed projectile, so it stays in viewport space and is drawn
+    // outside the emitter's scroll translation.
+    emitter.render(flameClock(time), scrolled.x, scrolled.y);
     marcShock.advance(delta);
     hermannShock.advance(delta);
     if (shockContext) {
@@ -177,11 +225,14 @@ export function startSignatureSplash(root: HTMLElement, options: SplashOptions =
     id: string,
     word: HTMLElement,
     target: HTMLElement,
-    seatOf: (word: DOMRect, target: DOMRect) => FlameSeat,
+    seatOf: (word: FlameBounds, target: FlameBounds) => FlameSeat,
     dust: { readonly enabled: boolean; readonly direction: -1 | 1 },
   ) => {
-    const wordBounds = word.getBoundingClientRect();
-    const targetBounds = target.getBoundingClientRect();
+    // Read live rather than from the cache: measuring the rects already costs a
+    // layout, and a stale offset here would weld the fire off the letter for good.
+    const scroll: ScrollOffset = { x: window.scrollX, y: window.scrollY };
+    const wordBounds = toDocumentBounds(word.getBoundingClientRect(), scroll);
+    const targetBounds = toDocumentBounds(target.getBoundingClientRect(), scroll);
     emitter.anchorFlame(id, seatOf(wordBounds, targetBounds));
     // The same impact that lights the letter knocks soot off it.
     if (dust.enabled) emitter.burstDust(createDustBurst(wordBounds, targetBounds, dust.direction));
@@ -244,6 +295,51 @@ export function startSignatureSplash(root: HTMLElement, options: SplashOptions =
       spec.passes[1]?.startsAt ?? 0,
     );
 
+  const documentBoundsOf = (element: Element) =>
+    toDocumentBounds(element.getBoundingClientRect(), {
+      x: window.scrollX,
+      y: window.scrollY,
+    });
+
+  timeline.call(
+    () => {
+      emitter.anchorFlame(
+        "hermann-heel",
+        createHeelFlameSeat(documentBoundsOf(hermann), documentBoundsOf(hermannHeel)),
+      );
+    },
+    [],
+    spec.heelIgnitesAt,
+  );
+  timeline.call(
+    () => {
+      const wordBounds = documentBoundsOf(hermann);
+      const heelBounds = documentBoundsOf(hermannHeel);
+      const outlineBounds = documentBoundsOf(aboutOutline);
+      emitter.startEmberTrail(
+        {
+          x: heelBounds.left + (heelBounds.right - heelBounds.left) * 0.16,
+          y: wordBounds.bottom,
+        },
+        {
+          x: outlineBounds.left,
+          y: outlineBounds.top + (outlineBounds.bottom - outlineBounds.top) * 0.7,
+        },
+      );
+    },
+    [],
+    spec.emberDripAt,
+  );
+  timeline.call(
+    () => {
+      emitter.anchorFlame("about-outline", createOutlineFlameSeat(documentBoundsOf(aboutOutline)));
+      aboutButton.dataset.lit = "true";
+    },
+    [],
+    spec.aboutIgnitesAt,
+  );
+  timeline.call(() => emitter.removeFlame("hermann-heel"), [], spec.heelExtinguishesAt);
+
   // The shockwave leads the first ignition, so the loop runs for the whole timeline.
   fireRenderer.start();
 
@@ -260,6 +356,9 @@ export function startSignatureSplash(root: HTMLElement, options: SplashOptions =
       marcShock.clear();
       hermannShock.clear();
     },
+    revealAbout: () => {
+      aboutButton.dataset.lit = "true";
+    },
   });
   window.addEventListener("resize", onResize, { passive: true });
 
@@ -270,5 +369,6 @@ export function startSignatureSplash(root: HTMLElement, options: SplashOptions =
     marcShock.clear();
     hermannShock.clear();
     window.removeEventListener("resize", onResize);
+    window.removeEventListener("scroll", onScroll);
   };
 }

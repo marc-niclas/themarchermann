@@ -31,6 +31,8 @@ export interface FlameSite {
   readonly weight: number;
   /** This site's own breathing phase, so no two spots flare together. */
   readonly phase: number;
+  /** Local parcel-size multiplier for brighter corners or quieter spans. */
+  readonly flare?: number;
 }
 
 /** Everything an emitter needs to keep one letter alight. */
@@ -40,6 +42,12 @@ export interface FlameSeat {
   readonly scale: number;
   /** Stable flicker phase so two seats never breathe in lockstep. */
   readonly phase: number;
+  /** Relative fuel flow for seats that need a denser flame body. */
+  readonly fuel?: number;
+  /** Vertical force, parcel size, and life multipliers for low-fire seats. */
+  readonly rise?: number;
+  readonly size?: number;
+  readonly life?: number;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -107,6 +115,22 @@ export const SEAM_CLIMB_JITTER = 0.3;
 export const SEAM_WEIGHT_JITTER = 0.22;
 /** How much the outward lean of a strand site may vary. */
 export const SEAM_LEAN_JITTER = 0.3;
+
+/** H heel: a compact pool along the lower-left foot before the ember drip. */
+export const HEEL_SITE_COUNT = 5;
+export const HEEL_WIDTH = 0.34;
+export const HEEL_HEIGHT = 0.12;
+
+/** About outline: fuel along both sides and the lower rounded edge. */
+export const OUTLINE_SIDE_SITE_COUNT = 4;
+export const OUTLINE_CORNER_SITE_COUNT = 5;
+export const OUTLINE_BOTTOM_SITE_COUNT = 36;
+export const OUTLINE_FUEL = 3;
+export const OUTLINE_RISE = 0.18;
+export const OUTLINE_SIZE = 0.68;
+export const OUTLINE_LIFE = 0.55;
+export const OUTLINE_SIDE_HEIGHT = 0.42;
+export const OUTLINE_RADIUS = 0.38;
 
 /** Upward acceleration of fully hot gas, px/s^2 at scale 1. */
 export const FLAME_BUOYANCY = 620;
@@ -343,6 +367,95 @@ export function createSeamFlameSeat(word: FlameBounds, letter: FlameBounds): Fla
   }
 
   return { sites, scale: flameScale(cap), phase: seatPhase(seamX, baseline) };
+}
+
+/** A small, temporary seat on the lower-left foot of HERMANN's H. */
+export function createHeelFlameSeat(word: FlameBounds, letter: FlameBounds): FlameSeat {
+  const cap = capHeightOf(word);
+  const width = letter.right - letter.left;
+  const seedBase = letter.left + word.bottom;
+  const sites: FlameSite[] = [];
+
+  for (let index = 0; index < HEEL_SITE_COUNT; index += 1) {
+    const progress = index / Math.max(HEEL_SITE_COUNT - 1, 1);
+    sites.push({
+      x: letter.left + width * HEEL_WIDTH * progress,
+      y: word.bottom - cap * HEEL_HEIGHT * Math.sin(progress * Math.PI),
+      ...lean(-0.45 + progress * 0.75, -1),
+      weight: 1 - progress * 0.35,
+      phase: flameNoise(seedBase + index * 8.3) * TAU,
+    });
+  }
+
+  return {
+    sites,
+    scale: flameScale(cap),
+    phase: seatPhase(letter.left, word.bottom),
+  };
+}
+
+/**
+ * Traces the visible sides and lower edge of the About control. The top is left
+ * unlit so the flame reads as licking around an invisible rounded outline.
+ */
+export function createOutlineFlameSeat(outline: FlameBounds): FlameSeat {
+  const width = Math.max(outline.right - outline.left, 1);
+  const height = Math.max(outline.bottom - outline.top, 1);
+  const radius = Math.min(height * OUTLINE_RADIUS, width / 2);
+  const seedBase = outline.left + outline.bottom;
+  const sites: FlameSite[] = [];
+
+  for (const side of [-1, 1] as const) {
+    for (let index = 0; index < OUTLINE_SIDE_SITE_COUNT; index += 1) {
+      const progress = index / Math.max(OUTLINE_SIDE_SITE_COUNT - 1, 1);
+      sites.push({
+        x: side < 0 ? outline.left : outline.right,
+        y: outline.bottom - radius - (height * OUTLINE_SIDE_HEIGHT - radius) * progress,
+        ...lean(side * 0.55, -1),
+        weight: 1.25 - progress * 0.5,
+        phase: flameNoise(seedBase + side * 29 + index * 7.7) * TAU,
+        flare: 1.15 - progress * 0.25,
+      });
+    }
+
+    for (let index = 0; index < OUTLINE_CORNER_SITE_COUNT; index += 1) {
+      const progress = index / Math.max(OUTLINE_CORNER_SITE_COUNT - 1, 1);
+      const angle = progress * (Math.PI / 2);
+      sites.push({
+        x:
+          side < 0
+            ? outline.left + radius * (1 - Math.cos(angle))
+            : outline.right - radius * (1 - Math.cos(angle)),
+        y: outline.bottom - radius + radius * Math.sin(angle),
+        ...lean(side * (0.7 - progress * 0.35), -1),
+        weight: 1.2 + Math.sin(progress * Math.PI) * 0.25,
+        phase: flameNoise(seedBase + side * 47 + index * 5.9) * TAU,
+        flare: 1.1 + Math.sin(progress * Math.PI) * 0.18,
+      });
+    }
+  }
+
+  for (let index = 0; index < OUTLINE_BOTTOM_SITE_COUNT; index += 1) {
+    const progress = index / Math.max(OUTLINE_BOTTOM_SITE_COUNT - 1, 1);
+    sites.push({
+      x: outline.left + radius + (width - radius * 2) * progress,
+      y: outline.bottom,
+      ...lean((progress - 0.5) * 0.45, -1),
+      weight: 0.95 - Math.sin(progress * Math.PI) * 0.12,
+      phase: flameNoise(seedBase + 71 + index * 6.3) * TAU,
+      flare: 0.78 - Math.sin(progress * Math.PI) * 0.28,
+    });
+  }
+
+  return {
+    sites,
+    scale: flameScale(height * 2.2),
+    phase: seatPhase(outline.left + width / 2, outline.bottom),
+    fuel: OUTLINE_FUEL,
+    rise: OUTLINE_RISE,
+    size: OUTLINE_SIZE,
+    life: OUTLINE_LIFE,
+  };
 }
 
 /**

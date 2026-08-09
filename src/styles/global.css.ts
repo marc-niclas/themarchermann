@@ -172,7 +172,7 @@ globalStyle('[data-projectile="hermann-dash"]', {
 export const particles = style({
   position: "fixed",
   inset: 0,
-  zIndex: 4,
+  zIndex: 6,
   width: "100vw",
   height: "100vh",
   pointerEvents: "none",
@@ -196,20 +196,21 @@ globalStyle('[data-signature-splash][data-motion="reduced"] canvas', { display: 
 export const aboutButton = style({
   display: "inline-flex",
   position: "relative",
-  zIndex: 5,
   alignItems: "center",
-  gap: "0.75em",
+  gap: "0.3em",
   marginTop: "clamp(1.75rem, 5vw, 3.5rem)",
-  padding: "0.4em 0",
-  color: "#2c2e2d",
+  padding: "0.72em 0.75em",
+  borderRadius: "1rem",
+  color: "#171918",
   fontSize: "clamp(0.7rem, 1.4vw, 0.95rem)",
   fontWeight: 700,
   letterSpacing: "0.3em",
+  lineHeight: 1.1,
   textDecoration: "none",
   textTransform: "uppercase",
   transition: "color 900ms ease, text-shadow 900ms ease",
   selectors: {
-    "&:hover": { color: "#8a8c86" },
+    "&:hover": { color: "#70736f" },
     "&:focus-visible": {
       color: "#f2f0e9",
       outline: "2px solid #f4d400",
@@ -225,10 +226,24 @@ export const aboutButton = style({
   },
 });
 
-export const aboutLabel = style({ display: "inline-block" });
+export const aboutOutline = style({
+  position: "absolute",
+  inset: 0,
+  border: "1px solid transparent",
+  borderRadius: "inherit",
+  pointerEvents: "none",
+});
+
+export const aboutLabel = style({
+  position: "relative",
+  zIndex: 7,
+  display: "inline-block",
+});
 
 export const aboutArrow = style({
   display: "block",
+  position: "relative",
+  zIndex: 7,
   flexShrink: 0,
 });
 
@@ -237,9 +252,9 @@ export const prose = style({
   margin: "0 auto",
   padding: "clamp(4rem, 12vh, 9rem) clamp(1rem, 4vw, 3rem)",
   color: "#a8a49b",
-  fontFamily: 'Georgia, "Times New Roman", serif',
+  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
   fontSize: "clamp(1rem, 1.8vw, 1.15rem)",
-  lineHeight: 1.75,
+  lineHeight: 1.5,
 });
 
 globalStyle(`${prose} p`, { margin: "0 0 1.4em" });
@@ -253,6 +268,7 @@ export const proseTitle = style({
   fontSize: "clamp(1.6rem, 4vw, 2.6rem)",
   fontWeight: 900,
   letterSpacing: "-0.03em",
+  lineHeight: 1.05,
   textTransform: "uppercase",
 });
 
@@ -291,5 +307,6 @@ export const cornerMark = style({
   fontFamily: 'ui-monospace, "SFMono-Regular", Consolas, monospace',
   fontSize: "0.62rem",
   letterSpacing: "0.18em",
+  lineHeight: 1.1,
   textTransform: "uppercase",
 });

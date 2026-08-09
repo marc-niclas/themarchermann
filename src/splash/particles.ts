@@ -64,6 +64,7 @@ export interface ParticleProfile {
 }
 
 interface Particle {
+  readonly anchorId: string;
   x: number;
   y: number;
   vx: number;
@@ -78,6 +79,8 @@ interface Particle {
   wobble: number;
   /** Size and force multiplier inherited from the seat's type size. */
   scale: number;
+  /** Vertical-force multiplier inherited from low or full flame seats. */
+  rise: number;
 }
 
 interface FlameAnchor {
@@ -85,6 +88,28 @@ interface FlameAnchor {
   carry: number;
   /** Emitter time at which this seat caught, for its ignition envelope. */
   ignitedAt: number;
+}
+
+export interface FlamePoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+interface EmberTrail {
+  readonly source: FlamePoint;
+  readonly target: FlamePoint;
+  age: number;
+  carry: number;
+}
+
+interface Ember {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  readonly maxLife: number;
+  readonly size: number;
 }
 
 /**
@@ -134,6 +159,27 @@ const INVISIBLE_ALPHA = 0.015;
 const HALO_ALPHA = 0.42;
 const HALO_WIDTH = 1.9;
 const HALO_LENGTH = 1.3;
+const EMBER_TRAIL_DURATION = 0.18;
+const EMBER_TRAIL_RATE = 110;
+
+function clamp01(value: number): number {
+  if (!(value > 0)) return 0;
+  return value < 1 ? value : 1;
+}
+
+/** Deterministic lead position for the ember drip, including a small curl. */
+export function emberTrailPoint(
+  source: FlamePoint,
+  target: FlamePoint,
+  progress: number,
+): FlamePoint {
+  const amount = clamp01(progress);
+  const curl = Math.sin(amount * Math.PI) * Math.min(12, Math.abs(target.y - source.y) * 0.12);
+  return {
+    x: source.x + (target.x - source.x) * amount + curl,
+    y: source.y + (target.y - source.y) * amount,
+  };
+}
 
 /** The only particle in the splash: a parcel of burning gas seated on a glyph. */
 export const FLAME_PROFILE: ParticleProfile = {
@@ -154,6 +200,8 @@ export class ParticleEmitter {
   readonly #dust: DustMote[] = [];
   readonly #settled: SettledMote[] = [];
   readonly #anchors = new Map<string, FlameAnchor>();
+  readonly #emberTrails: EmberTrail[] = [];
+  readonly #embers: Ember[] = [];
   #width = 0;
   #height = 0;
   #lastTime = performance.now();
@@ -195,9 +243,20 @@ export class ParticleEmitter {
       const flash = Math.round(IGNITION_FLASH_COUNT * site.weight);
       for (let index = 0; index < flash; index += 1) {
         if (this.#particles.length >= FLAME_MAX_PARCELS) return;
-        this.#spawnFlame(seat, site, flare);
+        this.#spawnFlame(id, seat, site, flare);
       }
     }
+  }
+
+  removeFlame(id: string): void {
+    this.#anchors.delete(id);
+    for (let index = this.#particles.length - 1; index >= 0; index -= 1) {
+      if (this.#particles[index]?.anchorId === id) this.#particles.splice(index, 1);
+    }
+  }
+
+  startEmberTrail(source: FlamePoint, target: FlamePoint): void {
+    this.#emberTrails.push({ source, target, age: 0, carry: 0 });
   }
 
   /**
@@ -232,7 +291,7 @@ export class ParticleEmitter {
   }
 
   /** `flare` is the seat's ignition envelope right now; 1 is the calm burn. */
-  #spawnFlame(seat: FlameSeat, site: FlameSite, flare: number): void {
+  #spawnFlame(anchorId: string, seat: FlameSeat, site: FlameSite, flare: number): void {
     const profile = FLAME_PROFILE;
     const scale = seat.scale;
     // One draw decides how big a parcel this is; a gout is both fatter and
@@ -241,7 +300,8 @@ export class ParticleEmitter {
     const lifeMix = 0.45 * spread + 0.55 * Math.random();
     const maxLife =
       (profile.minLife + (profile.maxLife - profile.minLife) * lifeMix) *
-      ignitionGain(flare, IGNITION_LIFE_GAIN);
+      ignitionGain(flare, IGNITION_LIFE_GAIN) *
+      (seat.life ?? 1);
     const jitter = profile.horizontalSpread * scale;
     // A parcel leaves along the stroke first; buoyancy only wins once drag has
     // eaten that initial lick, which is what makes the fire look attached.
@@ -249,9 +309,11 @@ export class ParticleEmitter {
     const rise =
       (FLAME_LAUNCH_RISE + Math.random() * FLAME_LAUNCH_RISE_SPAN) *
       scale *
-      ignitionGain(flare, IGNITION_RISE_GAIN);
+      ignitionGain(flare, IGNITION_RISE_GAIN) *
+      (seat.rise ?? 1);
 
     this.#particles.push({
+      anchorId,
       x: site.x + (Math.random() - 0.5) * jitter,
       y: site.y + (Math.random() - 0.5) * jitter * 0.6,
       vx: site.leanX * lick + (Math.random() - 0.5) * lick * 0.5,
@@ -260,15 +322,28 @@ export class ParticleEmitter {
       maxLife,
       size:
         (profile.minSize + (profile.maxSize - profile.minSize) * spread) *
-        ignitionGain(flare, IGNITION_SIZE_GAIN),
+        ignitionGain(flare, IGNITION_SIZE_GAIN) *
+        (seat.size ?? 1) *
+        (site.flare ?? 1),
       color: FLAME_RAMP[FLAME_RAMP.length - 1] ?? "#fff7c2",
       seed: seat.phase + Math.random() * FLAME_SEED_SPREAD,
       wobble: 1 + (Math.random() - 0.5) * 2 * FLAME_WOBBLE_SPREAD,
       scale,
+      rise: seat.rise ?? 1,
     });
   }
 
-  render(time = performance.now()): void {
+  /**
+   * Everything the emitter owns is stored in document space, because the fire
+   * and the dust belong to the letters and the page scrolls. The canvas is fixed
+   * to the viewport, so the draw is a scrolled window onto that world: clear in
+   * viewport space, then translate by the scroll offset for the drawing itself.
+   *
+   * The translation is strictly balanced by save/restore. The controller draws
+   * the shockwave into this same context immediately afterwards, and that one is
+   * fed live viewport positions from a fixed projectile, so nothing may leak.
+   */
+  render(time = performance.now(), scrollX = 0, scrollY = 0): void {
     const delta = Math.min((time - this.#lastTime) / 1000, 0.05);
     this.#lastTime = time;
     this.#elapsed += delta;
@@ -276,22 +351,32 @@ export class ParticleEmitter {
 
     this.#refuel(delta);
     this.#update(delta);
+    this.#updateEmberTrails(delta);
+    this.#updateEmbers(delta);
     this.#updateDust(delta);
+
+    this.#context.save();
+    this.#context.translate(-scrollX, -scrollY);
     // Dust lies on the page under the fire, and is never additive.
     this.#drawDust();
     this.#drawFire();
+    this.#context.restore();
   }
 
   #refuel(delta: number): void {
-    for (const anchor of this.#anchors.values()) {
+    for (const [anchorId, anchor] of this.#anchors) {
       const flare = ignitionEnvelope(this.#elapsed - anchor.ignitedAt);
-      const rate = FLAME_PROFILE.spawnRate * ignitionGain(flare, IGNITION_SPAWN_GAIN);
+      const rate =
+        FLAME_PROFILE.spawnRate *
+        (anchor.seat.fuel ?? 1) *
+        ignitionGain(flare, IGNITION_SPAWN_GAIN);
       const surge = fuelSurge(this.#elapsed, anchor.seat.phase);
       const drained = drainSpawnBudget(anchor.carry, rate, surge, delta);
       anchor.carry = drained.carry;
       for (let index = 0; index < drained.spawns; index += 1) {
         if (this.#particles.length >= FLAME_MAX_PARCELS) break;
         this.#spawnFlame(
+          anchorId,
           anchor.seat,
           pickFlameSite(anchor.seat.sites, Math.random(), this.#elapsed),
           flare,
@@ -314,7 +399,7 @@ export class ParticleEmitter {
       particle.y += particle.vy * delta;
 
       const age = 1 - particle.life / particle.maxLife;
-      particle.vy = advanceFlameVelocity(particle.vy, age, particle.scale, delta);
+      particle.vy = advanceFlameVelocity(particle.vy, age, particle.scale * particle.rise, delta);
       particle.vx = advanceFlameLateral(
         particle.vx,
         this.#elapsed,
@@ -324,6 +409,49 @@ export class ParticleEmitter {
         delta,
         particle.wobble,
       );
+    }
+  }
+
+  #updateEmberTrails(delta: number): void {
+    for (let index = this.#emberTrails.length - 1; index >= 0; index -= 1) {
+      const trail = this.#emberTrails[index];
+      if (!trail) continue;
+      trail.age += delta;
+      trail.carry += EMBER_TRAIL_RATE * delta;
+      const spawns = Math.floor(trail.carry);
+      trail.carry -= spawns;
+      const point = emberTrailPoint(trail.source, trail.target, trail.age / EMBER_TRAIL_DURATION);
+
+      for (let spawn = 0; spawn < spawns; spawn += 1) {
+        const life = 0.18 + Math.random() * 0.22;
+        this.#embers.push({
+          x: point.x + (Math.random() - 0.5) * 5,
+          y: point.y + (Math.random() - 0.5) * 3,
+          vx: (Math.random() - 0.5) * 24,
+          vy: 18 + Math.random() * 30,
+          life,
+          maxLife: life,
+          size: 1.2 + Math.random() * 2.1,
+        });
+      }
+
+      if (trail.age >= EMBER_TRAIL_DURATION) this.#emberTrails.splice(index, 1);
+    }
+  }
+
+  #updateEmbers(delta: number): void {
+    for (let index = this.#embers.length - 1; index >= 0; index -= 1) {
+      const ember = this.#embers[index];
+      if (!ember) continue;
+      ember.life -= delta;
+      if (ember.life <= 0) {
+        this.#embers.splice(index, 1);
+        continue;
+      }
+      ember.x += ember.vx * delta;
+      ember.y += ember.vy * delta;
+      ember.vx *= Math.exp(-2.2 * delta);
+      ember.vy += 80 * delta;
     }
   }
 
@@ -438,6 +566,15 @@ export class ParticleEmitter {
       }
     }
 
+    for (const ember of this.#embers) {
+      const life = ember.life / ember.maxLife;
+      context.fillStyle = life > 0.55 ? "#fff7c2" : life > 0.25 ? "#ffd400" : "#ff8a00";
+      context.globalAlpha = Math.min(0.9, life * 1.35);
+      context.beginPath();
+      context.ellipse(ember.x, ember.y, ember.size * 0.7, ember.size * 1.4, 0, 0, TAU);
+      context.fill();
+    }
+
     for (const particle of this.#particles) {
       const age = 1 - particle.life / particle.maxLife;
       const alpha = flameAlpha(age);
@@ -480,6 +617,8 @@ export class ParticleEmitter {
     this.#dust.length = 0;
     this.#settled.length = 0;
     this.#anchors.clear();
+    this.#emberTrails.length = 0;
+    this.#embers.length = 0;
     this.#context.clearRect(0, 0, this.#width, this.#height);
   }
 }

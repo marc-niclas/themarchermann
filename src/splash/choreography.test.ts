@@ -57,6 +57,11 @@ describe("signature splash choreography", () => {
     expect(spec.readableAt).toBeCloseTo(hermann.startsAt + hermann.duration);
     expect(spec.persistentIgnition).toBe(true);
     expect(spec.effectsEndAt).toBeNull();
+    expect(spec.heelIgnitesAt).toBeGreaterThan(spec.readableAt);
+    expect(spec.emberDripAt).toBeGreaterThan(spec.heelIgnitesAt);
+    expect(spec.aboutIgnitesAt).toBeGreaterThan(spec.emberDripAt);
+    expect(spec.heelExtinguishesAt).toBeGreaterThan(spec.aboutIgnitesAt);
+    expect(spec.aboutIgnitesAt).toBeLessThan(2);
   });
 
   it("makes every word immediately readable and disables effects for reduced motion", () => {
@@ -68,5 +73,6 @@ describe("signature splash choreography", () => {
     expect(spec.particlesEnabled).toBe(false);
     expect(spec.persistentIgnition).toBe(false);
     expect(spec.readableAt).toBe(0);
+    expect(spec.aboutIgnitesAt).toBe(0);
   });
 });
