@@ -1,4 +1,15 @@
-export type ParticleKind = "ember" | "flame";
+export type ParticleKind = "ember" | "flame" | "kindle";
+
+export interface ParticleProfile {
+  readonly count: number;
+  readonly minLife: number;
+  readonly maxLife: number;
+  readonly minSize: number;
+  readonly maxSize: number;
+  readonly gravity: number;
+  readonly colors: readonly string[];
+  readonly shape: "spark" | "streak" | "flame";
+}
 
 interface Particle {
   x: number;
@@ -9,9 +20,47 @@ interface Particle {
   maxLife: number;
   size: number;
   color: string;
+  gravity: number;
+  kind: ParticleKind;
+  shape: ParticleProfile["shape"];
 }
 
-const COLORS = ["#fff7c2", "#ffd400", "#ff8a00"] as const;
+const PROFILES: Readonly<Record<ParticleKind, ParticleProfile>> = {
+  ember: {
+    count: 1,
+    minLife: 0.24,
+    maxLife: 0.38,
+    minSize: 1.25,
+    maxSize: 2.25,
+    gravity: 70,
+    colors: ["#fff7c2", "#ffd400", "#ff8a00"],
+    shape: "spark",
+  },
+  flame: {
+    count: 3,
+    minLife: 0.12,
+    maxLife: 0.24,
+    minSize: 1.5,
+    maxSize: 3.5,
+    gravity: 35,
+    colors: ["#fff7c2", "#ffd400", "#ff8a00"],
+    shape: "streak",
+  },
+  kindle: {
+    count: 24,
+    minLife: 0.5,
+    maxLife: 0.85,
+    minSize: 1.5,
+    maxSize: 4.5,
+    gravity: 120,
+    colors: ["#fff7c2", "#ffd400", "#ff8a00", "#ff3d00"],
+    shape: "flame",
+  },
+};
+
+export function getParticleProfile(kind: ParticleKind): ParticleProfile {
+  return PROFILES[kind];
+}
 
 export class ParticleEmitter {
   readonly #canvas: HTMLCanvasElement;
@@ -43,18 +92,27 @@ export class ParticleEmitter {
   }
 
   emit(x: number, y: number, kind: ParticleKind, direction: -1 | 1): void {
-    const count = kind === "flame" ? 3 : 1;
-    for (let index = 0; index < count; index += 1) {
-      const maxLife = kind === "flame" ? 0.22 + Math.random() * 0.18 : 0.3;
+    const profile = getParticleProfile(kind);
+    for (let index = 0; index < profile.count; index += 1) {
+      const maxLife = profile.minLife + Math.random() * (profile.maxLife - profile.minLife);
+      const kindle = kind === "kindle";
       this.#particles.push({
-        x,
-        y: y + (Math.random() - 0.5) * 7,
-        vx: direction * (55 + Math.random() * 150),
-        vy: (Math.random() - 0.5) * 55,
+        x: x + (Math.random() - 0.5) * (kindle ? 12 : 2),
+        y: y + (Math.random() - 0.5) * (kindle ? 10 : 7),
+        vx: kindle
+          ? direction * (20 + Math.random() * 55) + (Math.random() - 0.5) * 150
+          : direction * (55 + Math.random() * 150),
+        vy: kindle ? -(35 + Math.random() * 165) : (Math.random() - 0.5) * 55,
         life: maxLife,
         maxLife,
-        size: kind === "flame" ? 1.5 + Math.random() * 2.5 : 1.5,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)] ?? COLORS[1],
+        size: profile.minSize + Math.random() * (profile.maxSize - profile.minSize),
+        color:
+          profile.colors[Math.floor(Math.random() * profile.colors.length)] ??
+          profile.colors[0] ??
+          "#ffd400",
+        gravity: profile.gravity,
+        kind,
+        shape: profile.shape,
       });
     }
   }
@@ -74,13 +132,32 @@ export class ParticleEmitter {
       }
       particle.x += particle.vx * delta;
       particle.y += particle.vy * delta;
+      particle.vy += particle.gravity * delta;
       particle.vx *= 0.93;
       const alpha = particle.life / particle.maxLife;
       this.#context.globalAlpha = alpha;
       this.#context.fillStyle = particle.color;
-      this.#context.fillRect(particle.x, particle.y, particle.size * (1 + alpha), particle.size);
+      this.#context.shadowBlur = particle.kind === "kindle" ? 9 : 4;
+      this.#context.shadowColor = particle.color;
+      if (particle.shape === "flame") {
+        this.#context.beginPath();
+        this.#context.ellipse(
+          particle.x,
+          particle.y,
+          particle.size * (0.7 + alpha * 0.25),
+          particle.size * (1.1 + alpha * 0.65),
+          0,
+          0,
+          Math.PI * 2,
+        );
+        this.#context.fill();
+      } else {
+        const length = particle.shape === "streak" ? 2.4 + alpha * 2.2 : 1 + alpha;
+        this.#context.fillRect(particle.x, particle.y, particle.size * length, particle.size * 0.7);
+      }
     }
     this.#context.globalAlpha = 1;
+    this.#context.shadowBlur = 0;
   }
 
   clear(): void {

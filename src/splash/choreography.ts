@@ -6,6 +6,7 @@ export interface SplashPass {
   readonly projectileId: "marc-dash" | "hermann-dash";
   readonly direction: PassDirection;
   readonly revealFrom: "left" | "right";
+  readonly impactLetter: "C" | "R";
   readonly startsAt: number;
   readonly duration: number;
 }
@@ -27,11 +28,11 @@ export interface TravelGeometry {
   readonly overscan: number;
 }
 
-const HOLD = 0.3;
-const GAP = 0.1;
-const MARC_DURATION = 0.42;
-const HERMANN_DURATION = 0.6;
-const PARTICLE_DECAY = 0.4;
+const HOLD = 0.16;
+const GAP = 0.05;
+const MARC_DURATION = 0.22;
+const HERMANN_DURATION = 0.3;
+const PARTICLE_DECAY = 0.5;
 
 export function getOffscreenTravel(
   direction: PassDirection,
@@ -62,6 +63,7 @@ export function createSplashSpec(reducedMotion: boolean): SplashSpec {
     projectileId: "marc-dash",
     direction: "left-to-right",
     revealFrom: "left",
+    impactLetter: "C",
     startsAt: HOLD,
     duration: MARC_DURATION,
   };
@@ -70,6 +72,7 @@ export function createSplashSpec(reducedMotion: boolean): SplashSpec {
     projectileId: "hermann-dash",
     direction: "right-to-left",
     revealFrom: "right",
+    impactLetter: "R",
     startsAt: HOLD + MARC_DURATION + GAP,
     duration: HERMANN_DURATION,
   };

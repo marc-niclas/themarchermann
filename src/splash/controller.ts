@@ -4,6 +4,22 @@ import { ParticleEmitter } from "./particles";
 
 const OVERSCAN = 32;
 
+export interface ImpactBounds {
+  readonly left: number;
+  readonly right: number;
+  readonly bottom: number;
+}
+
+export function getImpactPoint(
+  wordBounds: ImpactBounds,
+  targetBounds: ImpactBounds,
+): { readonly x: number; readonly y: number } {
+  return {
+    x: targetBounds.left + (targetBounds.right - targetBounds.left) / 2,
+    y: wordBounds.bottom,
+  };
+}
+
 export interface ResizeAbortActions {
   readonly resizeParticles: () => void;
   readonly stopTimeline: () => void;
@@ -41,6 +57,8 @@ export function startSignatureSplash(root: HTMLElement): () => void {
   const canvas = requireElement<HTMLCanvasElement>(root, "[data-particles]");
   const marc = requireElement<HTMLElement>(root, '[data-word="MARC"]');
   const hermann = requireElement<HTMLElement>(root, '[data-word="HERMANN"]');
+  const marcImpact = requireElement<HTMLElement>(marc, '[data-impact="C"]');
+  const hermannImpact = requireElement<HTMLElement>(hermann, '[data-impact="R"]');
   const marcDash = requireElement<HTMLElement>(root, '[data-projectile="marc-dash"]');
   const hermannDash = requireElement<HTMLElement>(root, '[data-projectile="hermann-dash"]');
   const emitter = new ParticleEmitter(canvas);
@@ -57,8 +75,16 @@ export function startSignatureSplash(root: HTMLElement): () => void {
   const hermannTravel = travel(hermannDash, "right-to-left");
   gsap.set(marc, { clipPath: "inset(0 100% 0 0)" });
   gsap.set(hermann, { clipPath: "inset(0 0 0 100%)" });
-  gsap.set(marcDash, { x: marcTravel.fromX, autoAlpha: 1 });
-  gsap.set(hermannDash, { x: hermannTravel.fromX, autoAlpha: 1 });
+  const baselineTop = (word: HTMLElement, dash: HTMLElement) => {
+    const wordBounds = word.getBoundingClientRect();
+    return wordBounds.bottom - dash.offsetHeight * 0.45;
+  };
+  gsap.set(marcDash, { x: marcTravel.fromX, top: baselineTop(marc, marcDash), autoAlpha: 1 });
+  gsap.set(hermannDash, {
+    x: hermannTravel.fromX,
+    top: baselineTop(hermann, hermannDash),
+    autoAlpha: 1,
+  });
 
   const dashCenterY = (dash: HTMLElement) => {
     const bounds = dash.getBoundingClientRect();
@@ -84,6 +110,14 @@ export function startSignatureSplash(root: HTMLElement): () => void {
     gsap.set(hermann, { clipPath: `inset(0 0 0 ${100 - revealed * 100}%)` });
   };
 
+  const ignite = (word: HTMLElement, target: HTMLElement, direction: -1 | 1) => {
+    const point = getImpactPoint(word.getBoundingClientRect(), target.getBoundingClientRect());
+    emitter.emit(point.x, point.y, "kindle", direction);
+  };
+
+  let marcIgnited = false;
+  let hermannIgnited = false;
+
   timeline
     .to(
       marcDash,
@@ -93,16 +127,13 @@ export function startSignatureSplash(root: HTMLElement): () => void {
         onUpdate: () => {
           emitter.render();
           revealMarc();
-        },
-        onComplete: () => {
-          const bounds = marc.getBoundingClientRect();
-          for (let index = 0; index < 8; index += 1) {
-            emitter.emit(
-              bounds.right,
-              bounds.top + bounds.height * 0.62,
-              "ember",
-              index % 2 ? -1 : 1,
-            );
+          if (!marcIgnited) {
+            const dashBounds = marcDash.getBoundingClientRect();
+            const impactBounds = marcImpact.getBoundingClientRect();
+            if (dashBounds.left >= impactBounds.left) {
+              marcIgnited = true;
+              ignite(marc, marcImpact, 1);
+            }
           }
         },
       },
@@ -118,6 +149,13 @@ export function startSignatureSplash(root: HTMLElement): () => void {
           revealHermann();
           const bounds = hermannDash.getBoundingClientRect();
           emitter.emit(bounds.right, dashCenterY(hermannDash), "flame", 1);
+          if (!hermannIgnited) {
+            const impactBounds = hermannImpact.getBoundingClientRect();
+            if (bounds.right <= impactBounds.right) {
+              hermannIgnited = true;
+              ignite(hermann, hermannImpact, -1);
+            }
+          }
         },
         onComplete: () => {
           gsap.set([marc, hermann], { clipPath: "inset(0 0 0 0)" });

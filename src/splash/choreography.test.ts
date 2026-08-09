@@ -20,12 +20,14 @@ describe("signature splash choreography", () => {
     expect(marc).toMatchObject({
       direction: "left-to-right",
       revealFrom: "left",
-      duration: 0.42,
+      duration: 0.22,
+      impactLetter: "C",
     });
     expect(hermann).toMatchObject({
       direction: "right-to-left",
       revealFrom: "right",
-      duration: 0.6,
+      duration: 0.3,
+      impactLetter: "R",
     });
     expect(marc.projectileId).not.toBe(hermann.projectileId);
   });
@@ -48,13 +50,13 @@ describe("signature splash choreography", () => {
     const marc = requirePass(spec.passes, "MARC");
     const hermann = requirePass(spec.passes, "HERMANN");
 
-    expect(spec.hold).toBeGreaterThanOrEqual(0.25);
-    expect(spec.hold).toBeLessThanOrEqual(0.35);
-    expect(hermann.startsAt - (marc.startsAt + marc.duration)).toBeCloseTo(0.1);
-    expect(spec.readableAt).toBeLessThanOrEqual(spec.hold + 1.5);
+    expect(spec.hold).toBeGreaterThanOrEqual(0.14);
+    expect(spec.hold).toBeLessThanOrEqual(0.18);
+    expect(hermann.startsAt - (marc.startsAt + marc.duration)).toBeCloseTo(0.05);
+    expect(spec.readableAt).toBeLessThan(1);
     expect(spec.readableAt).toBeCloseTo(hermann.startsAt + hermann.duration);
     expect(spec.effectsEndAt).toBeGreaterThan(spec.readableAt);
-    expect(spec.effectsEndAt - spec.readableAt).toBeLessThanOrEqual(0.5);
+    expect(spec.effectsEndAt - spec.readableAt).toBeCloseTo(0.5);
   });
 
   it("makes every word immediately readable and disables effects for reduced motion", () => {

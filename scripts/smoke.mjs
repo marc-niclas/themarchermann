@@ -37,11 +37,19 @@ try {
   assert.match(pageResponse.headers.get("content-type") ?? "", /^text\/html/);
   assert.match(html, /<title>Marc Hermann — Under Construction<\/title>/);
   assert.match(html, /<h1[^>]*id="signature-title"[^>]*>/);
+  assert.match(html, /data-signature-splash[^>]*data-layout="left"/);
   assert.match(html, />The Marc Hermann<\/span>/);
-  assert.match(html, /data-word="MARC">MARC<\/span>/);
-  assert.match(html, /data-word="HERMANN">HERMANN<\/span>/);
-  assert.match(html, /data-projectile="marc-dash"/);
-  assert.match(html, /data-projectile="hermann-dash"/);
+  assert.match(
+    html,
+    /data-word="MARC"[^>]*data-texture="soot"[^>]*>MAR<span data-impact="C">C<\/span>/,
+  );
+  assert.match(
+    html,
+    /data-word="HERMANN"[^>]*data-texture="soot"[^>]*>HE<span data-impact="R">R<\/span>MANN/,
+  );
+  assert.match(html, /data-projectile="marc-dash"[^>]*data-track="baseline"/);
+  assert.match(html, /data-projectile="hermann-dash"[^>]*data-track="baseline"/);
+  assert.match(html, /width:clamp\(3\.5rem,9vw,7rem\)/);
   assert.match(html, /<canvas[^>]*data-particles[^>]*aria-hidden="true"/);
   assert.match(
     html,

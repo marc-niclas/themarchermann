@@ -21,17 +21,17 @@ import * as styles from "../styles/global.css";
   </head>
   <body>
     <main class={styles.main}>
-      <section class={styles.splash} data-signature-splash aria-labelledby="signature-title">
+      <section class={styles.splash} data-signature-splash data-layout="left" aria-labelledby="signature-title">
         <h1 id="signature-title" class={styles.heading}>
           <span class={styles.screenReaderText}>The Marc Hermann</span>
           <span class={styles.visualWords} aria-hidden="true">
             <span class={`${styles.word} ${styles.theWord}`}>THE</span>
-            <span class={`${styles.word} ${styles.marcWord}`} data-word="MARC">MARC</span>
-            <span class={`${styles.word} ${styles.hermannWord}`} data-word="HERMANN">HERMANN</span>
+            <span class={`${styles.word} ${styles.marcWord}`} data-word="MARC" data-texture="soot">MAR<span data-impact="C">C</span></span>
+            <span class={`${styles.word} ${styles.hermannWord}`} data-word="HERMANN" data-texture="soot">HE<span data-impact="R">R</span>MANN</span>
           </span>
         </h1>
-        <span class={`${styles.projectile} ${styles.marcDash}`} data-projectile="marc-dash" aria-hidden="true"></span>
-        <span class={`${styles.projectile} ${styles.hermannDash}`} data-projectile="hermann-dash" aria-hidden="true"></span>
+        <span class={styles.projectile} data-projectile="marc-dash" data-track="baseline" aria-hidden="true"></span>
+        <span class={styles.projectile} data-projectile="hermann-dash" data-track="baseline" aria-hidden="true"></span>
         <canvas class={styles.particles} data-particles aria-hidden="true"></canvas>
       </section>
       <p class={styles.cornerMark} aria-hidden="true">M / H — 2026</p>
