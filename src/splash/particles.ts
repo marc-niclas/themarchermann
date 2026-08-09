@@ -1,15 +1,63 @@
-export type ParticleKind = "ember" | "flame" | "kindle";
+import {
+  advanceDustFlight,
+  DUST_ALPHA,
+  DUST_BURST_COUNT,
+  DUST_FLIGHT_TIMEOUT,
+  DUST_MAX_MOTES,
+  DUST_MAX_SETTLED,
+  DUST_REST_FLATTEN,
+  type DustBurst,
+  dustBedIn,
+  dustDragFor,
+  dustFanAngle,
+  dustFlightAlpha,
+  dustKicksBack,
+  dustLaunchSpeed,
+  dustRestAlpha,
+  dustRestY,
+  dustShade,
+  dustSize,
+  dustSourceX,
+  dustSourceY,
+  hasLanded,
+} from "./dust";
+import {
+  advanceFlameLateral,
+  advanceFlameVelocity,
+  drainSpawnBudget,
+  FLAME_LAUNCH_RISE,
+  FLAME_LAUNCH_RISE_SPAN,
+  FLAME_MAX_PARCELS,
+  FLAME_RAMP,
+  FLAME_SEED_SPREAD,
+  FLAME_WOBBLE_SPREAD,
+  type FlameSeat,
+  type FlameSite,
+  flameAlpha,
+  flameHeat,
+  flameNoise,
+  flameRadii,
+  flameRampIndex,
+  fuelSurge,
+  IGNITION_FLASH_COUNT,
+  IGNITION_GLOW_GAIN,
+  IGNITION_LIFE_GAIN,
+  IGNITION_RISE_GAIN,
+  IGNITION_SIZE_GAIN,
+  IGNITION_SPAWN_GAIN,
+  ignitionEnvelope,
+  ignitionGain,
+  parcelSpread,
+  pickFlameSite,
+  sitePulse,
+} from "./flame";
 
 export interface ParticleProfile {
-  readonly count: number;
   readonly minLife: number;
   readonly maxLife: number;
   readonly minSize: number;
   readonly maxSize: number;
-  readonly gravity: number;
   readonly colors: readonly string[];
-  readonly shape: "spark" | "streak" | "flame";
-  readonly anchored: boolean;
   readonly spawnRate: number;
   readonly horizontalSpread: number;
   readonly maxHorizontalSpeed: number;
@@ -24,84 +72,93 @@ interface Particle {
   maxLife: number;
   size: number;
   color: string;
-  gravity: number;
-  kind: ParticleKind;
-  shape: ParticleProfile["shape"];
+  /** Curl phase. Neighbours share a seat phase so the column wavers as one body. */
+  seed: number;
+  /** This parcel's own shedding rate, so the column slowly decoheres. */
+  wobble: number;
+  /** Size and force multiplier inherited from the seat's type size. */
+  scale: number;
 }
 
 interface FlameAnchor {
+  seat: FlameSeat;
+  carry: number;
+  /** Emitter time at which this seat caught, for its ignition envelope. */
+  ignitedAt: number;
+}
+
+/**
+ * A speck of soot in the air, thrown off a glyph by the impact. Kept in its own
+ * pool with its own budget: it shares nothing with the fire but the clock, and
+ * the two must not compete for the same ceiling.
+ */
+interface DustMote {
   x: number;
   y: number;
-  carry: number;
+  vx: number;
+  vy: number;
+  /** Emitter seconds in the air, for the fade-in and the timeout safety net. */
+  flightTime: number;
+  /** Air resistance for this grain: big chips carry, fine grit stops dead. */
+  drag: number;
+  size: number;
+  color: string;
+  /** Height this mote comes to rest at. */
+  restY: number;
+  /** Opacity it will hold at, forever, once it has bedded in. */
+  restAlpha: number;
 }
 
-const PROFILES: Readonly<Record<ParticleKind, ParticleProfile>> = {
-  ember: {
-    count: 1,
-    minLife: 0.24,
-    maxLife: 0.38,
-    minSize: 1.25,
-    maxSize: 2.25,
-    gravity: 70,
-    colors: ["#fff7c2", "#ffd400", "#ff8a00"],
-    shape: "spark",
-    anchored: false,
-    spawnRate: 0,
-    horizontalSpread: 2,
-    maxHorizontalSpeed: 205,
-  },
-  flame: {
-    count: 3,
-    minLife: 0.12,
-    maxLife: 0.24,
-    minSize: 1.5,
-    maxSize: 3.5,
-    gravity: 35,
-    colors: ["#fff7c2", "#ffd400", "#ff8a00"],
-    shape: "streak",
-    anchored: false,
-    spawnRate: 0,
-    horizontalSpread: 2,
-    maxHorizontalSpeed: 205,
-  },
-  kindle: {
-    count: 6,
-    minLife: 0.24,
-    maxLife: 0.52,
-    minSize: 2,
-    maxSize: 5,
-    gravity: 55,
-    colors: ["#fff7c2", "#ffd400", "#ff8a00", "#ff3d00"],
-    shape: "flame",
-    anchored: true,
-    spawnRate: 36,
-    horizontalSpread: 4,
-    maxHorizontalSpeed: 8,
-  },
+/**
+ * Dust that has landed. It is retired out of the simulation entirely — no
+ * velocity, no life, no physics — and simply redrawn, because the emitter clears
+ * the canvas every frame. This is debris on the page: it never expires.
+ */
+interface SettledMote {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  alpha: number;
+  /** Emitter time it landed at, for the short bed-in ease. */
+  settledAt: number;
+}
+
+const TAU = Math.PI * 2;
+/** Below this speed a parcel has stalled and there is no direction left to align to. */
+const ALIGNMENT_FLOOR = 4;
+/** Anything fainter than this costs a fill and shows nothing, so it is skipped. */
+const INVISIBLE_ALPHA = 0.015;
+/** The soft outer body of a lick, drawn under its core. */
+const HALO_ALPHA = 0.42;
+const HALO_WIDTH = 1.9;
+const HALO_LENGTH = 1.3;
+
+/** The only particle in the splash: a parcel of burning gas seated on a glyph. */
+export const FLAME_PROFILE: ParticleProfile = {
+  minLife: 0.42,
+  maxLife: 0.95,
+  minSize: 2.4,
+  maxSize: 5.6,
+  colors: FLAME_RAMP,
+  spawnRate: 96,
+  horizontalSpread: 5,
+  maxHorizontalSpeed: 42,
 };
-
-export function getParticleProfile(kind: ParticleKind): ParticleProfile {
-  return PROFILES[kind];
-}
-
-export function advanceVerticalVelocity(
-  velocity: number,
-  gravity: number,
-  delta: number,
-  anchored: boolean,
-): number {
-  const nextVelocity = velocity + gravity * delta;
-  return anchored ? Math.min(0, nextVelocity) : nextVelocity;
-}
 
 export class ParticleEmitter {
   readonly #canvas: HTMLCanvasElement;
   readonly #context: CanvasRenderingContext2D;
   readonly #particles: Particle[] = [];
+  readonly #dust: DustMote[] = [];
+  readonly #settled: SettledMote[] = [];
   readonly #anchors = new Map<string, FlameAnchor>();
   #width = 0;
   #height = 0;
   #lastTime = performance.now();
+  /** Seconds of emitter time, accumulated from render deltas only. */
+  #elapsed = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     const context = canvas.getContext("2d");
@@ -124,64 +181,126 @@ export class ParticleEmitter {
     this.#context.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  emit(x: number, y: number, kind: ParticleKind, direction: -1 | 1): void {
-    const profile = getParticleProfile(kind);
-    for (let index = 0; index < profile.count; index += 1) {
-      this.#spawn(x, y, kind, direction);
+  /**
+   * Lights a letter and keeps it lit. The seat carries the geometry of the fuel
+   * left on the glyph, so the fire hugs the stroke instead of sitting on a point.
+   */
+  anchorFlame(id: string, seat: FlameSeat): void {
+    this.#anchors.set(id, { seat, carry: 0, ignitedAt: this.#elapsed });
+
+    // The accelerant going up: every site lights at once and hard, then the
+    // envelope walks the seat down to its steady burn over the next seconds.
+    const flare = ignitionEnvelope(0);
+    for (const site of seat.sites) {
+      const flash = Math.round(IGNITION_FLASH_COUNT * site.weight);
+      for (let index = 0; index < flash; index += 1) {
+        if (this.#particles.length >= FLAME_MAX_PARCELS) return;
+        this.#spawnFlame(seat, site, flare);
+      }
     }
   }
 
-  anchorFlame(id: string, x: number, y: number): void {
-    this.#anchors.set(id, { x, y, carry: 0 });
-    this.emit(x, y, "kindle", 1);
+  /**
+   * Throws one burst of soot off a struck letter. One shot: unlike the fire
+   * there is no anchor to keep feeding, the impact knocks the dust loose and
+   * that is all the dust there is.
+   */
+  burstDust(burst: DustBurst): void {
+    for (let index = 0; index < DUST_BURST_COUNT; index += 1) {
+      if (this.#dust.length >= DUST_MAX_MOTES) return;
+
+      const x = dustSourceX(burst, Math.random());
+      const kickRoll = Math.random();
+      const kicksBack = dustKicksBack(kickRoll);
+      const angle = dustFanAngle(burst, x, Math.random(), kickRoll);
+      const speed = dustLaunchSpeed(Math.random(), burst.scale, kicksBack);
+      const size = dustSize(Math.random(), burst.scale, kicksBack);
+
+      this.#dust.push({
+        x,
+        y: dustSourceY(burst, Math.random()),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        flightTime: 0,
+        drag: dustDragFor(size, burst.scale),
+        size,
+        color: dustShade(Math.random()),
+        restY: dustRestY(burst, Math.random()),
+        restAlpha: dustRestAlpha(size, burst.scale),
+      });
+    }
   }
 
-  #spawn(x: number, y: number, kind: ParticleKind, direction: -1 | 1): void {
-    const profile = getParticleProfile(kind);
-    const maxLife = profile.minLife + Math.random() * (profile.maxLife - profile.minLife);
-    const kindle = profile.anchored;
+  /** `flare` is the seat's ignition envelope right now; 1 is the calm burn. */
+  #spawnFlame(seat: FlameSeat, site: FlameSite, flare: number): void {
+    const profile = FLAME_PROFILE;
+    const scale = seat.scale;
+    // One draw decides how big a parcel this is; a gout is both fatter and
+    // longer lived, the way a lump of unburnt fuel actually behaves.
+    const spread = parcelSpread(Math.random(), Math.random());
+    const lifeMix = 0.45 * spread + 0.55 * Math.random();
+    const maxLife =
+      (profile.minLife + (profile.maxLife - profile.minLife) * lifeMix) *
+      ignitionGain(flare, IGNITION_LIFE_GAIN);
+    const jitter = profile.horizontalSpread * scale;
+    // A parcel leaves along the stroke first; buoyancy only wins once drag has
+    // eaten that initial lick, which is what makes the fire look attached.
+    const lick = profile.maxHorizontalSpeed * (0.55 + Math.random() * 0.9) * scale;
+    const rise =
+      (FLAME_LAUNCH_RISE + Math.random() * FLAME_LAUNCH_RISE_SPAN) *
+      scale *
+      ignitionGain(flare, IGNITION_RISE_GAIN);
+
     this.#particles.push({
-      x: x + (Math.random() - 0.5) * profile.horizontalSpread * 2,
-      y: kindle ? y - Math.random() * 2 : y + (Math.random() - 0.5) * 7,
-      vx: kindle
-        ? (Math.random() - 0.5) * profile.maxHorizontalSpeed * 2
-        : direction * (55 + Math.random() * 150),
-      vy: kindle ? -(24 + Math.random() * 68) : (Math.random() - 0.5) * 55,
+      x: site.x + (Math.random() - 0.5) * jitter,
+      y: site.y + (Math.random() - 0.5) * jitter * 0.6,
+      vx: site.leanX * lick + (Math.random() - 0.5) * lick * 0.5,
+      vy: site.leanY * lick - rise,
       life: maxLife,
       maxLife,
-      size: profile.minSize + Math.random() * (profile.maxSize - profile.minSize),
-      color:
-        profile.colors[Math.floor(Math.random() * profile.colors.length)] ??
-        profile.colors[0] ??
-        "#ffd400",
-      gravity: profile.gravity,
-      kind,
-      shape: profile.shape,
+      size:
+        (profile.minSize + (profile.maxSize - profile.minSize) * spread) *
+        ignitionGain(flare, IGNITION_SIZE_GAIN),
+      color: FLAME_RAMP[FLAME_RAMP.length - 1] ?? "#fff7c2",
+      seed: seat.phase + Math.random() * FLAME_SEED_SPREAD,
+      wobble: 1 + (Math.random() - 0.5) * 2 * FLAME_WOBBLE_SPREAD,
+      scale,
     });
   }
 
   render(time = performance.now()): void {
     const delta = Math.min((time - this.#lastTime) / 1000, 0.05);
     this.#lastTime = time;
+    this.#elapsed += delta;
     this.#context.clearRect(0, 0, this.#width, this.#height);
 
-    const kindleProfile = getParticleProfile("kindle");
+    this.#refuel(delta);
+    this.#update(delta);
+    this.#updateDust(delta);
+    // Dust lies on the page under the fire, and is never additive.
+    this.#drawDust();
+    this.#drawFire();
+  }
+
+  #refuel(delta: number): void {
     for (const anchor of this.#anchors.values()) {
-      anchor.carry += delta * kindleProfile.spawnRate;
-      while (anchor.carry >= 1) {
-        this.#spawn(anchor.x, anchor.y, "kindle", 1);
-        anchor.carry -= 1;
+      const flare = ignitionEnvelope(this.#elapsed - anchor.ignitedAt);
+      const rate = FLAME_PROFILE.spawnRate * ignitionGain(flare, IGNITION_SPAWN_GAIN);
+      const surge = fuelSurge(this.#elapsed, anchor.seat.phase);
+      const drained = drainSpawnBudget(anchor.carry, rate, surge, delta);
+      anchor.carry = drained.carry;
+      for (let index = 0; index < drained.spawns; index += 1) {
+        if (this.#particles.length >= FLAME_MAX_PARCELS) break;
+        this.#spawnFlame(
+          anchor.seat,
+          pickFlameSite(anchor.seat.sites, Math.random(), this.#elapsed),
+          flare,
+        );
       }
-
-      this.#context.globalAlpha = 0.78;
-      this.#context.fillStyle = "#ff8a00";
-      this.#context.shadowBlur = 12;
-      this.#context.shadowColor = "#ff5a00";
-      this.#context.beginPath();
-      this.#context.ellipse(anchor.x, anchor.y - 1, 4.5, 2.5, 0, 0, Math.PI * 2);
-      this.#context.fill();
     }
+  }
 
+  #update(delta: number): void {
     for (let index = this.#particles.length - 1; index >= 0; index -= 1) {
       const particle = this.#particles[index];
       if (!particle) continue;
@@ -190,43 +309,176 @@ export class ParticleEmitter {
         this.#particles.splice(index, 1);
         continue;
       }
+
       particle.x += particle.vx * delta;
       particle.y += particle.vy * delta;
-      particle.vy = advanceVerticalVelocity(
-        particle.vy,
-        particle.gravity,
+
+      const age = 1 - particle.life / particle.maxLife;
+      particle.vy = advanceFlameVelocity(particle.vy, age, particle.scale, delta);
+      particle.vx = advanceFlameLateral(
+        particle.vx,
+        this.#elapsed,
+        particle.seed,
+        age,
+        particle.scale,
         delta,
-        particle.kind === "kindle",
+        particle.wobble,
       );
-      particle.vx *= 0.93;
-      const alpha = particle.life / particle.maxLife;
-      this.#context.globalAlpha = alpha;
-      this.#context.fillStyle = particle.color;
-      this.#context.shadowBlur = particle.kind === "kindle" ? 9 : 4;
-      this.#context.shadowColor = particle.color;
-      if (particle.shape === "flame") {
-        this.#context.beginPath();
-        this.#context.ellipse(
-          particle.x,
-          particle.y,
-          particle.size * (0.7 + alpha * 0.25),
-          particle.size * (1.1 + alpha * 0.65),
+    }
+  }
+
+  /**
+   * Only dust still in the air is simulated. A mote that reaches its resting
+   * height is moved to the settled list and never touched again.
+   */
+  #updateDust(delta: number): void {
+    for (let index = this.#dust.length - 1; index >= 0; index -= 1) {
+      const mote = this.#dust[index];
+      if (!mote) continue;
+
+      mote.flightTime += delta;
+      mote.x += mote.vx * delta;
+      mote.y += mote.vy * delta;
+      const next = advanceDustFlight(mote.vx, mote.vy, delta, mote.drag);
+      mote.vx = next.vx;
+      mote.vy = next.vy;
+
+      if (hasLanded(mote.y, mote.restY, mote.vy)) {
+        this.#dust.splice(index, 1);
+        if (this.#settled.length >= DUST_MAX_SETTLED) continue;
+        this.#settled.push({
+          x: mote.x,
+          y: mote.restY,
+          width: mote.size,
+          height: mote.size * DUST_REST_FLATTEN,
+          color: mote.color,
+          alpha: mote.restAlpha,
+          settledAt: this.#elapsed,
+        });
+        continue;
+      }
+
+      // Safety net: nothing should ever still be flying by now.
+      if (mote.flightTime >= DUST_FLIGHT_TIMEOUT) this.#dust.splice(index, 1);
+    }
+  }
+
+  /**
+   * Flat, dim specks. No glow, no blur: this is grit on the page. Settled dust
+   * has to be repainted every frame because the emitter clears the canvas, but
+   * each speck is a single flat fill with no path behind it.
+   */
+  #drawDust(): void {
+    const context = this.#context;
+
+    for (const mote of this.#settled) {
+      // Eases from the flight opacity onto its resting one, then holds there for
+      // good: there is no term here that can take it to zero.
+      const alpha =
+        DUST_ALPHA + (mote.alpha - DUST_ALPHA) * dustBedIn(this.#elapsed - mote.settledAt);
+      context.globalAlpha = alpha;
+      context.fillStyle = mote.color;
+      context.fillRect(mote.x, mote.y, mote.width, mote.height);
+    }
+
+    for (const mote of this.#dust) {
+      const alpha = dustFlightAlpha(mote.flightTime);
+      if (alpha < INVISIBLE_ALPHA) continue;
+      context.globalAlpha = alpha;
+      context.fillStyle = mote.color;
+      context.fillRect(mote.x, mote.y, mote.size, mote.size);
+    }
+
+    context.globalAlpha = 1;
+  }
+
+  /**
+   * The fire is drawn additively: overlapping parcels bloom to white where the
+   * plume is dense and stay a thin cool lick where it is not, which is the grade
+   * we want without paying for a shadow blur on every parcel.
+   */
+  #drawFire(): void {
+    const context = this.#context;
+    context.globalCompositeOperation = "lighter";
+    context.shadowBlur = 0;
+
+    for (const anchor of this.#anchors.values()) {
+      const surge = fuelSurge(this.#elapsed, anchor.seat.phase);
+      const scale = anchor.seat.scale;
+      const flare = ignitionGain(
+        ignitionEnvelope(this.#elapsed - anchor.ignitedAt),
+        IGNITION_GLOW_GAIN,
+      );
+      for (const site of anchor.seat.sites) {
+        const glow = site.weight * surge * sitePulse(this.#elapsed, site.phase) * flare;
+        // A stable per-site lump: one puddle is always wider than its neighbour.
+        const lump = flameNoise(site.phase * 3.1);
+        const x = site.x + (lump - 0.5) * 2 * scale;
+        const y = site.y - scale;
+
+        context.fillStyle = "#ff8a00";
+        context.globalAlpha = Math.min(0.26, 0.07 + glow * 0.1);
+        context.beginPath();
+        context.ellipse(
+          x,
+          y,
+          (3 + glow * 3.4) * (0.75 + lump * 0.55) * scale,
+          (2.2 + glow * 2.2) * (0.8 + lump * 0.4) * scale,
           0,
           0,
-          Math.PI * 2,
+          TAU,
         );
-        this.#context.fill();
-      } else {
-        const length = particle.shape === "streak" ? 2.4 + alpha * 2.2 : 1 + alpha;
-        this.#context.fillRect(particle.x, particle.y, particle.size * length, particle.size * 0.7);
+        context.fill();
+
+        context.fillStyle = "#fff7c2";
+        context.globalAlpha = Math.min(0.2, 0.04 + glow * 0.07);
+        context.beginPath();
+        context.ellipse(x, y, (1.5 + lump * 0.8) * scale, 1.5 * scale, 0, 0, TAU);
+        context.fill();
       }
     }
-    this.#context.globalAlpha = 1;
-    this.#context.shadowBlur = 0;
+
+    for (const particle of this.#particles) {
+      const age = 1 - particle.life / particle.maxLife;
+      const alpha = flameAlpha(age);
+      if (alpha < INVISIBLE_ALPHA) continue;
+      const { rx, ry } = flameRadii(age, particle.size, particle.scale);
+      const speed = Math.hypot(particle.vx, particle.vy);
+      // Stretch along travel so a lick that curls sideways lies down with it.
+      const rotation =
+        speed > ALIGNMENT_FLOOR ? Math.atan2(particle.vy, particle.vx) + Math.PI / 2 : 0;
+
+      context.fillStyle = FLAME_RAMP[flameRampIndex(flameHeat(age))] ?? "#ff8a00";
+      const halo = alpha * HALO_ALPHA;
+      if (halo >= INVISIBLE_ALPHA) {
+        context.globalAlpha = halo;
+        context.beginPath();
+        context.ellipse(
+          particle.x,
+          particle.y,
+          rx * HALO_WIDTH,
+          ry * HALO_LENGTH,
+          rotation,
+          0,
+          TAU,
+        );
+        context.fill();
+      }
+
+      context.globalAlpha = alpha;
+      context.beginPath();
+      context.ellipse(particle.x, particle.y, rx, ry, rotation, 0, TAU);
+      context.fill();
+    }
+
+    context.globalCompositeOperation = "source-over";
+    context.globalAlpha = 1;
   }
 
   clear(): void {
     this.#particles.length = 0;
+    this.#dust.length = 0;
+    this.#settled.length = 0;
     this.#anchors.clear();
     this.#context.clearRect(0, 0, this.#width, this.#height);
   }

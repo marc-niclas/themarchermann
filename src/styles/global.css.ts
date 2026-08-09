@@ -11,21 +11,61 @@ globalStyle("*", { boxSizing: "border-box" });
 
 globalStyle("html", {
   minHeight: "100%",
-  overflow: "hidden",
+  overflowX: "hidden",
+  overflowY: "auto",
+  scrollBehavior: "smooth",
   background: "#090a0a",
+  "@media": {
+    "(prefers-reduced-motion: reduce)": { scrollBehavior: "auto" },
+  },
 });
 
 globalStyle("body", {
   minHeight: "100vh",
   margin: 0,
-  overflow: "hidden",
+  overflowX: "hidden",
   background: "#090a0a",
   color: "#f2f0e9",
 });
 
 globalStyle("::selection", { background: "#f4d400", color: "#090a0a" });
 
+/**
+ * Page texture, in two fixed layers behind the type.
+ *
+ * `::before` is film grain: an feTurbulence tile inlined as a data URI, so it
+ * costs no request and tiles at 180px. Kept very faint — enough to break the
+ * flat fill into something that reads as stock, not enough to buzz.
+ *
+ * `::after` is a vignette plus a soft warm lift low and left, where the fire
+ * sits, so the field feels lit by the splash rather than evenly painted.
+ */
+globalStyle("body::before", {
+  content: '""',
+  position: "fixed",
+  inset: 0,
+  zIndex: 0,
+  pointerEvents: "none",
+  opacity: 0.05,
+  backgroundImage:
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E\")",
+  backgroundRepeat: "repeat",
+  backgroundSize: "180px 180px",
+});
+
+globalStyle("body::after", {
+  content: '""',
+  position: "fixed",
+  inset: 0,
+  zIndex: 0,
+  pointerEvents: "none",
+  backgroundImage:
+    "radial-gradient(58% 42% at 26% 78%, rgba(255, 138, 0, 0.05) 0%, rgba(255, 138, 0, 0) 68%), radial-gradient(110% 85% at 50% 42%, rgba(0, 0, 0, 0) 42%, rgba(0, 0, 0, 0.5) 100%)",
+});
+
 export const main = style({
+  position: "relative",
+  zIndex: 1,
   display: "grid",
   minHeight: "100svh",
   placeItems: "center",
@@ -101,13 +141,32 @@ export const projectile = style({
   position: "fixed",
   left: 0,
   zIndex: 3,
-  width: "clamp(3.5rem, 9vw, 7rem)",
+  width: "clamp(1.75rem, 4.5vw, 3.5rem)",
   height: "clamp(0.28rem, 0.58vw, 0.58rem)",
-  background: "#f4d400",
-  boxShadow: "0 0 0.35rem rgba(255, 224, 0, 0.72), 0 0 1.1rem rgba(244, 120, 0, 0.28)",
+  borderRadius: "9999px",
+  /**
+   * drop-shadow follows the alpha of the gradient below, so the glow dies away
+   * with the tail. box-shadow would ring the whole capsule and undo the fade.
+   */
+  filter:
+    "drop-shadow(0 0 0.26rem rgba(255, 224, 0, 0.62)) drop-shadow(0 0 0.8rem rgba(244, 120, 0, 0.3))",
   opacity: 0,
   pointerEvents: "none",
   willChange: "transform",
+});
+
+/**
+ * Solid at the nose, dissolving down the length like a beam of light. The two
+ * dashes fly in opposite directions, so each has to fade away from its own nose.
+ */
+globalStyle('[data-projectile="marc-dash"]', {
+  backgroundImage:
+    "linear-gradient(to right, rgba(244,212,0,0) 0%, rgba(244,212,0,0.28) 52%, rgba(255,236,120,1) 100%)",
+});
+
+globalStyle('[data-projectile="hermann-dash"]', {
+  backgroundImage:
+    "linear-gradient(to left, rgba(244,212,0,0) 0%, rgba(244,212,0,0.28) 52%, rgba(255,236,120,1) 100%)",
 });
 
 export const particles = style({
@@ -125,6 +184,88 @@ globalStyle('[data-signature-splash][data-motion="reduced"] [data-projectile]', 
 
 globalStyle('[data-signature-splash][data-motion="reduced"] canvas', { display: "none" });
 
+/**
+ * Sits unlit — dark grey against the near-black field, present but not legible —
+ * until the embers dripping off the H set it alight and `data-lit` flips.
+ *
+ * Because that leaves it below any sane contrast ratio while unlit, three
+ * escape hatches keep it reachable: hover and keyboard focus both light it, and
+ * reduced-motion users get it legible immediately, since for them no ember is
+ * ever going to arrive.
+ */
+export const aboutButton = style({
+  display: "inline-flex",
+  position: "relative",
+  zIndex: 5,
+  alignItems: "center",
+  gap: "0.75em",
+  marginTop: "clamp(1.75rem, 5vw, 3.5rem)",
+  padding: "0.4em 0",
+  color: "#2c2e2d",
+  fontSize: "clamp(0.7rem, 1.4vw, 0.95rem)",
+  fontWeight: 700,
+  letterSpacing: "0.3em",
+  textDecoration: "none",
+  textTransform: "uppercase",
+  transition: "color 900ms ease, text-shadow 900ms ease",
+  selectors: {
+    "&:hover": { color: "#8a8c86" },
+    "&:focus-visible": {
+      color: "#f2f0e9",
+      outline: "2px solid #f4d400",
+      outlineOffset: "0.4rem",
+    },
+    '&[data-lit="true"]': {
+      color: "#ffcf8a",
+      textShadow: "0 0 0.55rem rgba(255, 138, 0, 0.5), 0 0 1.5rem rgba(255, 61, 0, 0.3)",
+    },
+  },
+  "@media": {
+    "(prefers-reduced-motion: reduce)": { color: "#a8a49b", transition: "none" },
+  },
+});
+
+export const aboutLabel = style({ display: "inline-block" });
+
+export const aboutArrow = style({
+  display: "block",
+  flexShrink: 0,
+});
+
+export const prose = style({
+  maxWidth: "min(92vw, 42rem)",
+  margin: "0 auto",
+  padding: "clamp(4rem, 12vh, 9rem) clamp(1rem, 4vw, 3rem)",
+  color: "#a8a49b",
+  fontFamily: 'Georgia, "Times New Roman", serif',
+  fontSize: "clamp(1rem, 1.8vw, 1.15rem)",
+  lineHeight: 1.75,
+});
+
+globalStyle(`${prose} p`, { margin: "0 0 1.4em" });
+
+globalStyle(`${prose} s`, { color: "#5f625e", textDecorationThickness: "1px" });
+
+export const proseTitle = style({
+  margin: "0 0 1.6rem",
+  color: "#f2f0e9",
+  fontFamily: 'Arial Black, "Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontSize: "clamp(1.6rem, 4vw, 2.6rem)",
+  fontWeight: 900,
+  letterSpacing: "-0.03em",
+  textTransform: "uppercase",
+});
+
+export const proseLink = style({
+  color: "#f4d400",
+  textDecorationColor: "rgba(244, 212, 0, 0.4)",
+  textUnderlineOffset: "0.2em",
+  selectors: {
+    "&:hover": { textDecorationColor: "#f4d400" },
+    "&:focus-visible": { outline: "2px solid #f4d400", outlineOffset: "0.2rem" },
+  },
+});
+
 export const screenReaderText = style({
   position: "absolute",
   width: 1,
@@ -140,7 +281,9 @@ export const screenReaderText = style({
 export const visualWords = style({ display: "contents" });
 
 export const cornerMark = style({
-  position: "fixed",
+  // Absolute, not fixed: the page scrolls now, and a pinned mark would ride
+  // down over the About copy.
+  position: "absolute",
   right: "clamp(1rem, 2.5vw, 2rem)",
   bottom: "clamp(1rem, 2.5vw, 2rem)",
   margin: 0,

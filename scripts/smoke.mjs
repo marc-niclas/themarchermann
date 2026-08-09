@@ -49,7 +49,14 @@ try {
   );
   assert.match(html, /data-projectile="marc-dash"[^>]*data-track="baseline"/);
   assert.match(html, /data-projectile="hermann-dash"[^>]*data-track="baseline"/);
-  assert.match(html, /width:clamp\(3\.5rem,9vw,7rem\)/);
+  assert.match(html, /width:clamp\(1\.75rem,4\.5vw,3\.5rem\)/);
+  // The dash fades from a solid nose to a transparent tail. Each pass flies the
+  // other way, so the gradients must run in opposite directions or one of them
+  // fades off its own nose. The minifier rewrites `to right`/`to left` as turns.
+  assert.match(html, /marc-dash\]\{background-image:linear-gradient\(90deg,#f4d40000/);
+  assert.match(html, /hermann-dash\]\{background-image:linear-gradient\(270deg,#f4d40000/);
+  // The splash must not cost a render-blocking stylesheet request.
+  assert.doesNotMatch(html, /<link rel="stylesheet"/);
   assert.match(html, /font-size:clamp\(3\.8rem,13\.5vw,11\.25rem\)/);
   assert.match(html, /<canvas[^>]*data-particles[^>]*aria-hidden="true"/);
   assert.match(

@@ -1,23 +1,16 @@
 import { gsap } from "gsap";
 import { createSplashSpec, getOffscreenTravel } from "./choreography";
+import { createScaledClock } from "./debug";
+import { createDustBurst, DUST_ON_HERMANN, DUST_ON_MARC } from "./dust";
+import { createArcFlameSeat, createSeamFlameSeat, FLAME_TIME_SCALE, type FlameSeat } from "./flame";
 import { ParticleEmitter } from "./particles";
+import { createShockwaveRenderer } from "./shockwave";
 
 const OVERSCAN = 32;
 
-export interface ImpactBounds {
-  readonly left: number;
-  readonly right: number;
-  readonly bottom: number;
-}
-
-export function getImpactPoint(
-  wordBounds: ImpactBounds,
-  targetBounds: ImpactBounds,
-): { readonly x: number; readonly y: number } {
-  return {
-    x: targetBounds.left + (targetBounds.right - targetBounds.left) / 2,
-    y: wordBounds.bottom,
-  };
+export interface SplashOptions {
+  /** 1 is full speed; smaller values slow the pass down for inspection. */
+  readonly timeScale?: number;
 }
 
 export interface PersistentRenderer {
@@ -82,7 +75,8 @@ function requireElement<T extends Element>(root: ParentNode, selector: string): 
   return element;
 }
 
-export function startSignatureSplash(root: HTMLElement): () => void {
+export function startSignatureSplash(root: HTMLElement, options: SplashOptions = {}): () => void {
+  const timeScale = options.timeScale ?? 1;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const spec = createSplashSpec(reducedMotion);
   root.dataset.motion = reducedMotion ? "reduced" : "active";
@@ -96,8 +90,37 @@ export function startSignatureSplash(root: HTMLElement): () => void {
   const marcDash = requireElement<HTMLElement>(root, '[data-projectile="marc-dash"]');
   const hermannDash = requireElement<HTMLElement>(root, '[data-projectile="hermann-dash"]');
   const emitter = new ParticleEmitter(canvas);
-  const fireRenderer = createPersistentRenderer((time) => emitter.render(time));
+  /** Drives the shockwave, which has to stay in step with the projectile. */
+  const passClock = createScaledClock(timeScale);
+  /** The fire burns on its own slower clock; see FLAME_TIME_SCALE. */
+  const flameClock = createScaledClock(timeScale * FLAME_TIME_SCALE);
+  /**
+   * Each pass gets its own shockwave so the two projectiles never look like one
+   * object teleporting across the viewport between passes.
+   */
+  const marcShock = createShockwaveRenderer();
+  const hermannShock = createShockwaveRenderer();
+  /** The emitter already holds this context, transform and all; 2D contexts are per-canvas singletons. */
+  const shockContext = canvas.getContext("2d");
+
+  let lastScaled = 0;
+  let clockStarted = false;
+  const fireRenderer = createPersistentRenderer((time) => {
+    const scaled = passClock(time);
+    const delta = clockStarted ? Math.min((scaled - lastScaled) / 1000, 0.05) : 0;
+    clockStarted = true;
+    lastScaled = scaled;
+    // The emitter clears the canvas, so the shockwave has to draw after it.
+    emitter.render(flameClock(time));
+    marcShock.advance(delta);
+    hermannShock.advance(delta);
+    if (shockContext) {
+      marcShock.draw(shockContext);
+      hermannShock.draw(shockContext);
+    }
+  });
   const timeline = gsap.timeline({ defaults: { ease: "none" } });
+  timeline.timeScale(timeScale);
 
   const travel = (projectile: HTMLElement, direction: "left-to-right" | "right-to-left") =>
     getOffscreenTravel(direction, {
@@ -145,9 +168,23 @@ export function startSignatureSplash(root: HTMLElement): () => void {
     gsap.set(hermann, { clipPath: `inset(0 0 0 ${100 - revealed * 100}%)` });
   };
 
-  const ignite = (id: string, word: HTMLElement, target: HTMLElement) => {
-    const point = getImpactPoint(word.getBoundingClientRect(), target.getBoundingClientRect());
-    emitter.anchorFlame(id, point.x, point.y);
+  /**
+   * The word's block box carries the baseline and cap height; the letter's inline
+   * box carries the horizontal extent. Seat builders combine the two so the fire
+   * never drops to the nested letter line box, which hangs below the baseline.
+   */
+  const ignite = (
+    id: string,
+    word: HTMLElement,
+    target: HTMLElement,
+    seatOf: (word: DOMRect, target: DOMRect) => FlameSeat,
+    dust: { readonly enabled: boolean; readonly direction: -1 | 1 },
+  ) => {
+    const wordBounds = word.getBoundingClientRect();
+    const targetBounds = target.getBoundingClientRect();
+    emitter.anchorFlame(id, seatOf(wordBounds, targetBounds));
+    // The same impact that lights the letter knocks soot off it.
+    if (dust.enabled) emitter.burstDust(createDustBurst(wordBounds, targetBounds, dust.direction));
     fireRenderer.start();
   };
 
@@ -162,12 +199,17 @@ export function startSignatureSplash(root: HTMLElement): () => void {
         duration: spec.passes[0]?.duration ?? 0,
         onUpdate: () => {
           revealMarc();
+          const bounds = marcDash.getBoundingClientRect();
+          // Travelling left-to-right, so the right edge is the leading edge.
+          marcShock.track(bounds.right, bounds.top + bounds.height / 2, 1);
           if (!marcIgnited) {
-            const dashBounds = marcDash.getBoundingClientRect();
             const impactBounds = marcImpact.getBoundingClientRect();
-            if (dashBounds.left >= impactBounds.left) {
+            if (bounds.left >= impactBounds.left) {
               marcIgnited = true;
-              ignite("marc-c", marc, marcImpact);
+              ignite("marc-c", marc, marcImpact, createArcFlameSeat, {
+                enabled: DUST_ON_MARC,
+                direction: 1,
+              });
             }
           }
         },
@@ -182,12 +224,16 @@ export function startSignatureSplash(root: HTMLElement): () => void {
         onUpdate: () => {
           revealHermann();
           const bounds = hermannDash.getBoundingClientRect();
-          emitter.emit(bounds.right, dashCenterY(hermannDash), "flame", 1);
+          // Travelling right-to-left, so the left edge is the leading edge.
+          hermannShock.track(bounds.left, dashCenterY(hermannDash), -1);
           if (!hermannIgnited) {
             const impactBounds = hermannImpact.getBoundingClientRect();
             if (bounds.right <= impactBounds.right) {
               hermannIgnited = true;
-              ignite("hermann-r", hermann, hermannImpact);
+              ignite("hermann-r", hermann, hermannImpact, createSeamFlameSeat, {
+                enabled: DUST_ON_HERMANN,
+                direction: -1,
+              });
             }
           }
         },
@@ -198,6 +244,9 @@ export function startSignatureSplash(root: HTMLElement): () => void {
       spec.passes[1]?.startsAt ?? 0,
     );
 
+  // The shockwave leads the first ignition, so the loop runs for the whole timeline.
+  fireRenderer.start();
+
   const onResize = createResizeAbortHandler({
     resizeParticles: () => emitter.resize(),
     stopTimeline: () => {
@@ -206,7 +255,11 @@ export function startSignatureSplash(root: HTMLElement): () => void {
     },
     revealWords: () => gsap.set([marc, hermann], { clipPath: "inset(0 0 0 0)" }),
     hideProjectiles: () => gsap.set([marcDash, hermannDash], { autoAlpha: 0 }),
-    clearParticles: () => emitter.clear(),
+    clearParticles: () => {
+      emitter.clear();
+      marcShock.clear();
+      hermannShock.clear();
+    },
   });
   window.addEventListener("resize", onResize, { passive: true });
 
@@ -214,6 +267,8 @@ export function startSignatureSplash(root: HTMLElement): () => void {
     timeline.kill();
     fireRenderer.stop();
     emitter.clear();
+    marcShock.clear();
+    hermannShock.clear();
     window.removeEventListener("resize", onResize);
   };
 }
