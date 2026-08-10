@@ -49,6 +49,16 @@ try {
   );
   assert.match(html, /data-projectile="marc-dash"[^>]*data-track="baseline"/);
   assert.match(html, /data-projectile="hermann-dash"[^>]*data-track="baseline"/);
+  assert.match(html, /data-app-bar[^>]*data-visible="false"/);
+  assert.match(html, /href="#about">About me<\/a>/);
+  assert.match(html, /href="#projects">Projects<\/a>/);
+  assert.match(html, /src="\/marc-hermann\.jpg" alt="Portrait of Marc Hermann"/);
+  assert.match(html, /href="https:\/\/github\.com\/marc-niclas"/);
+  assert.match(html, /href="https:\/\/x\.com\/niclas_hermann"/);
+  assert.match(html, /href="https:\/\/www\.instagram\.com\/marc_niclas\/"/);
+  assert.match(html, /href="https:\/\/www\.linkedin\.com\/in\/marc-hermann-11a5a5112\/"/);
+  assert.match(html, /--social-icon: url\(&quot;\/icons\/social\/github\.svg&quot;\)/);
+  assert.match(html, /--social-icon: url\(&quot;\/icons\/social\/instagram\.svg&quot;\)/);
   assert.match(html, /width:clamp\(1\.75rem,4\.5vw,3\.5rem\)/);
   // The dash fades from a solid nose to a transparent tail. Each pass flies the
   // other way, so the gradients must run in opposite directions or one of them

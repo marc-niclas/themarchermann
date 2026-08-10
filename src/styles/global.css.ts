@@ -30,6 +30,113 @@ globalStyle("body", {
 
 globalStyle("::selection", { background: "#f4d400", color: "#090a0a" });
 
+export const appBar = style({
+  position: "fixed",
+  top: 0,
+  right: 0,
+  left: 0,
+  zIndex: 20,
+  borderBottom: "1px solid rgba(242, 240, 233, 0.12)",
+  background: "rgba(9, 10, 10, 0.92)",
+  backdropFilter: "blur(12px)",
+  opacity: 0,
+  pointerEvents: "none",
+  transform: "translateY(-100%)",
+  visibility: "hidden",
+  transition: "transform 280ms ease, opacity 220ms ease",
+  selectors: {
+    '&[data-visible="true"]': {
+      opacity: 1,
+      pointerEvents: "auto",
+      transform: "translateY(0)",
+      visibility: "visible",
+    },
+  },
+  "@media": {
+    "(prefers-reduced-motion: reduce)": { transition: "none" },
+  },
+});
+
+export const appBarInner = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "1rem 1.5rem",
+  width: "min(100%, 76rem)",
+  minHeight: "3.5rem",
+  margin: "0 auto",
+  padding: "0.7rem clamp(1rem, 4vw, 3rem)",
+  "@media": {
+    "screen and (max-width: 38rem)": {
+      flexWrap: "wrap",
+      gap: "0.35rem 1rem",
+      minHeight: "auto",
+      paddingTop: "0.55rem",
+      paddingBottom: "0.55rem",
+    },
+  },
+});
+
+const navigationRow = {
+  display: "flex",
+  alignItems: "center",
+  flexWrap: "wrap",
+} as const;
+
+export const sectionNav = style({
+  ...navigationRow,
+  gap: "1.25rem",
+});
+
+export const appBarSocials = style({
+  ...navigationRow,
+  justifyContent: "flex-end",
+  gap: "1rem",
+  "@media": {
+    "screen and (max-width: 38rem)": { gap: "0.75rem" },
+  },
+});
+
+export const socialIconLink = style({
+  display: "grid",
+  width: "2rem",
+  height: "2rem",
+  padding: 0,
+  placeItems: "center",
+});
+
+export const socialIcon = style({
+  display: "block",
+  width: "1rem",
+  height: "1rem",
+  flexShrink: 0,
+  backgroundColor: "currentColor",
+  maskImage: "var(--social-icon)",
+  maskPosition: "center",
+  maskRepeat: "no-repeat",
+  maskSize: "contain",
+});
+
+export const appBarLink = style({
+  color: "#a8a49b",
+  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontSize: "0.72rem",
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  lineHeight: 1.1,
+  textDecoration: "none",
+  textTransform: "uppercase",
+  transition: "color 160ms ease",
+  selectors: {
+    "&:hover": { color: "#f4d400" },
+    "&:focus-visible": { color: "#f2f0e9", outline: "2px solid #f4d400", outlineOffset: "0.25rem" },
+  },
+  "@media": {
+    "screen and (max-width: 38rem)": { fontSize: "0.65rem" },
+    "(prefers-reduced-motion: reduce)": { transition: "none" },
+  },
+});
+
 /**
  * Page texture, in two fixed layers behind the type.
  *
@@ -255,11 +362,20 @@ export const prose = style({
   fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
   fontSize: "clamp(1rem, 1.8vw, 1.15rem)",
   lineHeight: 1.5,
+  scrollMarginTop: "5rem",
 });
 
 globalStyle(`${prose} p`, { margin: "0 0 1.4em" });
 
 globalStyle(`${prose} s`, { color: "#5f625e", textDecorationThickness: "1px" });
+
+export const aboutHeader = style({
+  display: "flex",
+  alignItems: "flex-end",
+  justifyContent: "space-between",
+  gap: "1.5rem",
+  marginBottom: "1.6rem",
+});
 
 export const proseTitle = style({
   margin: "0 0 1.6rem",
@@ -272,6 +388,28 @@ export const proseTitle = style({
   textTransform: "uppercase",
 });
 
+export const aboutTitle = style({ margin: 0 });
+
+export const portraitFrame = style({
+  width: "clamp(5.5rem, 16vw, 7.5rem)",
+  aspectRatio: "1",
+  overflow: "hidden",
+  flexShrink: 0,
+  border: "3px solid #f2f0e9",
+  borderRadius: "50%",
+  background: "#f2f0e9",
+});
+
+export const portrait = style({
+  display: "block",
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+  objectPosition: "52% 40%",
+  transform: "scale(1.35)",
+  transformOrigin: "52% 40%",
+});
+
 export const proseLink = style({
   color: "#f4d400",
   textDecorationColor: "rgba(244, 212, 0, 0.4)",
@@ -279,6 +417,36 @@ export const proseLink = style({
   selectors: {
     "&:hover": { textDecorationColor: "#f4d400" },
     "&:focus-visible": { outline: "2px solid #f4d400", outlineOffset: "0.2rem" },
+  },
+});
+
+export const aboutSocials = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "0.75rem 1.25rem",
+  marginTop: "2.5rem",
+  paddingTop: "1.5rem",
+  borderTop: "1px solid rgba(242, 240, 233, 0.12)",
+});
+
+export const socialLink = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.45rem",
+  color: "#f2f0e9",
+  fontSize: "0.78rem",
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  lineHeight: 1.1,
+  textDecoration: "none",
+  textTransform: "uppercase",
+  transition: "color 160ms ease",
+  selectors: {
+    "&:hover": { color: "#f4d400" },
+    "&:focus-visible": { color: "#f4d400", outline: "2px solid #f4d400", outlineOffset: "0.25rem" },
+  },
+  "@media": {
+    "(prefers-reduced-motion: reduce)": { transition: "none" },
   },
 });
 

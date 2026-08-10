@@ -20,7 +20,23 @@ import * as styles from "../styles/global.css";
     <title>{site.title}</title>
   </head>
   <body>
-    <main class={styles.main}>
+    <header class={styles.appBar} data-app-bar data-visible="false">
+      <div class={styles.appBarInner}>
+        <nav class={styles.sectionNav} aria-label="Page sections">
+          <a class={styles.appBarLink} href="#about">About me</a>
+          <a class={styles.appBarLink} href="#projects">Projects</a>
+        </nav>
+        <nav class={styles.appBarSocials} aria-label="Social profiles">
+          {site.socials.map((social) => (
+            <a class={`${styles.appBarLink} ${styles.socialIconLink}`} href={social.href} target="_blank" rel="noreferrer" aria-label={social.label} title={social.label}>
+              <span class={styles.socialIcon} style={`--social-icon: url("${social.icon}")`} aria-hidden="true"></span>
+            </a>
+          ))}
+        </nav>
+      </div>
+    </header>
+
+    <main class={styles.main} data-splash-page>
       <section class={styles.splash} data-signature-splash data-layout="left" aria-labelledby="signature-title">
         <h1 id="signature-title" class={styles.heading}>
           <span class={styles.screenReaderText}>The Marc Hermann</span>
@@ -46,36 +62,51 @@ import * as styles from "../styles/global.css";
     </main>
 
     <section id="about" class={styles.prose} aria-labelledby="about-title">
-      <h2 id="about-title" class={styles.proseTitle}>About</h2>
+      <div class={styles.aboutHeader}>
+        <h2 id="about-title" class={`${styles.proseTitle} ${styles.aboutTitle}`}>About</h2>
+        <div class={styles.portraitFrame}>
+          <img class={styles.portrait} src="/marc-hermann.jpg" alt="Portrait of Marc Hermann" />
+        </div>
+      </div>
       <p>
         Where to start... I guess first things first, I love TypeScript, Rust and Python. Building
         things in virtual worlds, whether apps, back-ends or CLIs, has become my full-time job and my
         weekend passion. I love what I do and I'll keep doing it as long as AI still lets me.
       </p>
       <p>
+        I'm currently employed at{" "}
+        <a class={styles.proseLink} href="https://www.brightnightpower.com">BrightNight Power</a>
+        {" "} as a full-stack engineer building PowerAlpha<sup>®</sup>, a next generation design tool for hybrid renewable
+        power plants.
+      </p>
+      <p>
         Gosh, what else... I love all things that go fast. Cars, planes, skis, Formula 1, Rust... You
         name it, if it goes fast, there's a good chance I'll like it.
       </p>
       <p>
-        I'm a man with two homes on two different continents, forced to live on one or the other.
-        Wherever I am, I'm missing the other. I spent my early childhood in Germany and now most of
-        my life here in the US. I have deep roots and a family I miss back home but have built a life
-        here in the US that I hold very dear.
-      </p>
-      <p>
         Last but not least, I'm married to my amazing wife, who somehow puts up with me. We live with
-        our two sweet cats, currently in West Palm Beach, Florida.
+        our two very sweet cats, currently in West Palm Beach, Florida.
       </p>
       <p>
         I think that's it? I don't want to bore you so check out my <s>unfinished</s> ongoing{" "}
         <a class={styles.proseLink} href="#projects">projects</a>.
       </p>
+      <nav class={styles.aboutSocials} aria-label="Social profiles">
+        {site.socials.map((social) => (
+          <a class={styles.socialLink} href={social.href} target="_blank" rel="noreferrer">
+            <span class={styles.socialIcon} style={`--social-icon: url("${social.icon}")`} aria-hidden="true"></span>
+            {social.label}
+          </a>
+        ))}
+      </nav>
     </section>
 
     <section id="projects" class={styles.prose} aria-labelledby="projects-title">
       <h2 id="projects-title" class={styles.proseTitle}>Projects</h2>
+      <p>🚧 Under construction 🚧</p>
     </section>
     <script>
+      import "../navigation/init";
       import "../splash/init";
     </script>
     <noscript><style is:global>[data-word]{clip-path:none!important}</style></noscript>
