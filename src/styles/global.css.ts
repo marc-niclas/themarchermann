@@ -357,12 +357,15 @@ export const aboutArrow = style({
 export const prose = style({
   maxWidth: "min(92vw, 42rem)",
   margin: "0 auto",
-  padding: "clamp(4rem, 12vh, 9rem) clamp(1rem, 4vw, 3rem)",
+  padding: "clamp(1rem, 2vh, 8rem) clamp(1rem, 4vw, 3rem)",
   color: "#a8a49b",
   fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
   fontSize: "clamp(1rem, 1.8vw, 1.15rem)",
   lineHeight: 1.5,
   scrollMarginTop: "5rem",
+  "@media": {
+    "screen and (max-width: 38rem)": { scrollMarginTop: "3.5rem" },
+  },
 });
 
 globalStyle(`${prose} p`, { margin: "0 0 1.4em" });
