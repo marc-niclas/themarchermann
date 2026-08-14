@@ -68,6 +68,9 @@ try {
   // The splash must not cost a render-blocking stylesheet request.
   assert.doesNotMatch(html, /<link rel="stylesheet"/);
   assert.match(html, /font-size:clamp\(3\.8rem,13\.5vw,11\.25rem\)/);
+  // Mobile anchors need a tighter offset than desktop so the responsive
+  // corner mark finishes behind the fixed app bar instead of just below it.
+  assert.match(html, /@media screen and \(width<=38rem\)\{[^<]*scroll-margin-top:3\.5rem/);
   assert.match(html, /<canvas[^>]*data-particles[^>]*aria-hidden="true"/);
   assert.match(
     html,

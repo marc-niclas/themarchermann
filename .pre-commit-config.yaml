@@ -1,0 +1,17 @@
+minimum_pre_commit_version: "3.2.0"
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  - repo: local
+    hooks:
+      - id: biome-staged
+        name: Biome check staged files
+        entry: bunx --no-install biome check --write --no-errors-on-unmatched --files-ignore-unknown=true
+        language: system
+        types: [text]
+
+  - repo: https://github.com/BrightNight-Energy/conventional-commit-check
+    rev: 081d36024097cd5e35e1d07fdec2624ec539298d # v1.2.1
+    hooks:
+      - id: first-commit-check
+        stages: [commit-msg]

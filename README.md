@@ -47,6 +47,19 @@ bun run firebase:deploy -- --project themarchermann-site
 
 `bun run verify` is the local equivalent of the CI quality gate. It builds and serves the generated site on an ephemeral loopback port, then checks the rendered heading, metadata, reduced-motion CSS, favicon, and 404 behavior over HTTP.
 
+## Git hooks
+
+Install [pre-commit](https://pre-commit.com/#install) 3.2 or newer, then activate the repository's
+formatting and commit-message hooks after `bun install`:
+
+```bash
+pre-commit install --install-hooks
+```
+
+The pre-commit hook runs the locked, locally installed Biome binary against staged text files and
+ignores file types Biome does not recognize. The commit-message hook checks the first commit on a
+branch for Conventional Commit syntax. `bun run verify` remains the required full quality gate.
+
 ## Releases
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/). Pushes to `main` run the quality gate and then semantic-release. This site is private as an npm package; semantic-release creates GitHub tags and releases only.
