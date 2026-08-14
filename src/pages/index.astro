@@ -10,7 +10,7 @@ import * as styles from "../styles/global.css";
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={site.description} />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#08090c" />
+    <meta name="theme-color" content="#090a0a" />
     <link rel="canonical" href={site.url} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta property="og:type" content="website" />
@@ -20,12 +20,95 @@ import * as styles from "../styles/global.css";
     <title>{site.title}</title>
   </head>
   <body>
-    <main class={styles.main}>
-      <section class={styles.content} aria-labelledby="page-title">
-        <p class={styles.domain}>themarchermann.com</p>
-        <h1 id="page-title" class={styles.heading}>{site.status}</h1>
-        <span class={styles.accent} aria-hidden="true"></span>
+    <header class={styles.appBar} data-app-bar data-visible="false">
+      <div class={styles.appBarInner}>
+        <nav class={styles.sectionNav} aria-label="Page sections">
+          <a class={styles.appBarLink} href="#about">About me</a>
+          <a class={styles.appBarLink} href="#projects">Projects</a>
+        </nav>
+        <nav class={styles.appBarSocials} aria-label="Social profiles">
+          {site.socials.map((social) => (
+            <a class={`${styles.appBarLink} ${styles.socialIconLink}`} href={social.href} target="_blank" rel="noreferrer" aria-label={social.label} title={social.label}>
+              <span class={styles.socialIcon} style={`--social-icon: url("${social.icon}")`} aria-hidden="true"></span>
+            </a>
+          ))}
+        </nav>
+      </div>
+    </header>
+
+    <main class={styles.main} data-splash-page>
+      <section class={styles.splash} data-signature-splash data-layout="left" aria-labelledby="signature-title">
+        <h1 id="signature-title" class={styles.heading}>
+          <span class={styles.screenReaderText}>The Marc Hermann</span>
+          <span class={styles.visualWords} aria-hidden="true">
+            <span class={`${styles.word} ${styles.theWord}`}>THE</span>
+            <span class={`${styles.word} ${styles.marcWord}`} data-word="MARC" data-texture="soot-patches">MAR<span data-impact="C">C</span></span>
+            <span class={`${styles.word} ${styles.hermannWord}`} data-word="HERMANN" data-texture="soot-patches"><span data-ember-source>H</span>E<span data-impact="R">R</span>MANN</span>
+          </span>
+        </h1>
+        <a class={styles.aboutButton} href="#about" data-about-button data-lit="false">
+          <span class={styles.aboutOutline} data-about-outline aria-hidden="true"></span>
+          <span class={styles.aboutLabel}>About me</span>
+          <svg class={styles.aboutArrow} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 4v15" />
+            <path d="m5.5 13 6.5 6.5 6.5-6.5" />
+          </svg>
+        </a>
+        <span class={styles.projectile} data-projectile="marc-dash" data-track="baseline" aria-hidden="true"></span>
+        <span class={styles.projectile} data-projectile="hermann-dash" data-track="baseline" aria-hidden="true"></span>
+        <canvas class={styles.particles} data-particles aria-hidden="true"></canvas>
       </section>
+      <p class={styles.cornerMark} aria-hidden="true">M / H — 2026</p>
     </main>
+
+    <section id="about" class={styles.prose} aria-labelledby="about-title">
+      <div class={styles.aboutHeader}>
+        <h2 id="about-title" class={`${styles.proseTitle} ${styles.aboutTitle}`}>About</h2>
+        <div class={styles.portraitFrame}>
+          <img class={styles.portrait} src="/marc-hermann.jpg" alt="Portrait of Marc Hermann" />
+        </div>
+      </div>
+      <p>
+        Where to start... I guess first things first, I love TypeScript, Rust and Python. Building
+        things in virtual worlds, whether apps, back-ends or CLIs, has become my full-time job and my
+        weekend passion. I love what I do and I'll keep doing it as long as AI still lets me.
+      </p>
+      <p>
+        I'm currently employed at{" "}
+        <a class={styles.proseLink} href="https://www.brightnightpower.com">BrightNight Power</a>
+        {" "} as a full-stack engineer building PowerAlpha<sup>®</sup>, a next generation design tool for hybrid renewable
+        power plants.
+      </p>
+      <p>
+        Gosh, what else... I love all things that go fast. Cars, planes, skis, Formula 1, Rust... You
+        name it, if it goes fast, there's a good chance I'll like it.
+      </p>
+      <p>
+        Last but not least, I'm married to my amazing wife, who somehow puts up with me. We live with
+        our two very sweet cats, currently in West Palm Beach, Florida.
+      </p>
+      <p>
+        I think that's it? I don't want to bore you so check out my <s>unfinished</s> ongoing{" "}
+        <a class={styles.proseLink} href="#projects">projects</a>.
+      </p>
+      <nav class={styles.aboutSocials} aria-label="Social profiles">
+        {site.socials.map((social) => (
+          <a class={styles.socialLink} href={social.href} target="_blank" rel="noreferrer">
+            <span class={styles.socialIcon} style={`--social-icon: url("${social.icon}")`} aria-hidden="true"></span>
+            {social.label}
+          </a>
+        ))}
+      </nav>
+    </section>
+
+    <section id="projects" class={styles.prose} aria-labelledby="projects-title">
+      <h2 id="projects-title" class={styles.proseTitle}>Projects</h2>
+      <p>🚧 Under construction 🚧</p>
+    </section>
+    <script>
+      import "../navigation/init";
+      import "../splash/init";
+    </script>
+    <noscript><style is:global>[data-word]{clip-path:none!important}</style></noscript>
   </body>
 </html>
