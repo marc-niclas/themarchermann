@@ -68,7 +68,7 @@ describe("emitter scroll window", () => {
   const letter = { left: 414, right: 525, top: 313, bottom: 423 };
 
   /** Runs enough emitter time for every mote of a burst to be on the page. */
-  const settleDust = (emitter: ParticleEmitter, from = 0) => {
+  const settleDust = (emitter: ParticleEmitter, from = performance.now()) => {
     let time = from;
     // Well past the longest possible flight, so nothing is still in the air.
     for (let frame = 0; frame < 240; frame += 1) {
