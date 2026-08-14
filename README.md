@@ -62,12 +62,12 @@ branch for Conventional Commit syntax. `bun run verify` remains the required ful
 
 ## Releases
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/). Pushes to `main` run the quality gate and then semantic-release. This site is private as an npm package; semantic-release creates GitHub tags and releases only.
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/). Pushes to `main` run the quality gate, deploy the verified artifact to production, and then run semantic-release. This site is private as an npm package; semantic-release creates GitHub tags and releases only after deployment succeeds.
 
 ## Deployment
 
 Astro writes the static site to `dist/`. The quality job uploads the exact build after its HTTP smoke test, and deployment jobs download that artifact rather than rebuilding it.
 
-Same-repository pull requests receive a seven-day channel in isolated Firebase project `themarchermann-preview`. The preview identity cannot access production. Pushes to `main` release first, then deploy Firebase project `themarchermann-site` through a separately gated production identity and GitHub `production` environment. Both paths use claim-constrained GitHub OIDC and Google Workload Identity Federation; there is no stored service-account key.
+Same-repository pull requests receive a seven-day channel in isolated Firebase project `themarchermann-preview`. The preview identity cannot access production. Pushes to `main` deploy Firebase project `themarchermann-site` through a separately gated production identity and GitHub `production` environment, then create the corresponding GitHub release. Both paths use claim-constrained GitHub OIDC and Google Workload Identity Federation; there is no stored service-account key.
 
 `themarchermann.com` and its `www` redirect are registered with Firebase. Registrar DNS remains unchanged pending the controlled cutover.
