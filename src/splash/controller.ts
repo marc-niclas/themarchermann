@@ -15,6 +15,7 @@ import { ParticleEmitter } from "./particles";
 import { createShockwaveRenderer } from "./shockwave";
 
 const OVERSCAN = 32;
+const VIEWPORT_WIDTH_JITTER = 2;
 
 export interface SplashOptions {
   /** 1 is full speed; smaller values slow the pass down for inspection. */
@@ -87,13 +88,18 @@ export interface ResizeAbortActions {
   readonly revealAbout: () => void;
 }
 
-export function createResizeAbortHandler(actions: ResizeAbortActions): () => void {
+export function createResizeAbortHandler(
+  initialViewportWidth: number,
+  actions: ResizeAbortActions,
+): (viewportWidth: number) => void {
   let aborted = false;
 
-  return () => {
+  return (viewportWidth) => {
     if (aborted) return;
-    aborted = true;
     actions.resizeParticles();
+    if (Math.abs(viewportWidth - initialViewportWidth) <= VIEWPORT_WIDTH_JITTER) return;
+
+    aborted = true;
     actions.stopTimeline();
     actions.revealWords();
     actions.hideProjectiles();
@@ -343,7 +349,7 @@ export function startSignatureSplash(root: HTMLElement, options: SplashOptions =
   // The shockwave leads the first ignition, so the loop runs for the whole timeline.
   fireRenderer.start();
 
-  const onResize = createResizeAbortHandler({
+  const onResize = createResizeAbortHandler(window.innerWidth, {
     resizeParticles: () => emitter.resize(),
     stopTimeline: () => {
       timeline.kill();
@@ -360,7 +366,8 @@ export function startSignatureSplash(root: HTMLElement, options: SplashOptions =
       aboutButton.dataset.lit = "true";
     },
   });
-  window.addEventListener("resize", onResize, { passive: true });
+  const handleResize = () => onResize(window.innerWidth);
+  window.addEventListener("resize", handleResize, { passive: true });
 
   return () => {
     timeline.kill();
@@ -368,7 +375,7 @@ export function startSignatureSplash(root: HTMLElement, options: SplashOptions =
     emitter.clear();
     marcShock.clear();
     hermannShock.clear();
-    window.removeEventListener("resize", onResize);
+    window.removeEventListener("resize", handleResize);
     window.removeEventListener("scroll", onScroll);
   };
 }
