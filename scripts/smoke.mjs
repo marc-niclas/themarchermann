@@ -54,7 +54,7 @@ try {
   assert.match(html, /href="#projects">Projects<\/a>/);
   assert.match(html, /src="\/marc-hermann\.jpg" alt="Portrait of Marc Hermann"/);
   assert.match(html, /href="https:\/\/github\.com\/marc-niclas"/);
-  assert.match(html, /href="https:\/\/x\.com\/niclas_hermann"/);
+  assert.match(html, /href="https:\/\/x\.com\/marc_niclas_/);
   assert.match(html, /href="https:\/\/www\.instagram\.com\/marc_niclas\/"/);
   assert.match(html, /href="https:\/\/www\.linkedin\.com\/in\/marc-hermann-11a5a5112\/"/);
   assert.match(html, /--social-icon: url\(&quot;\/icons\/social\/github\.svg&quot;\)/);
