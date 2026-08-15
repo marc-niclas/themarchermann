@@ -6,7 +6,7 @@ export const site = {
   url: "https://themarchermann.com",
   socials: [
     { label: "GitHub", href: "https://github.com/marc-niclas", icon: "/icons/social/github.svg" },
-    { label: "X", href: "https://x.com/niclas_hermann", icon: "/icons/social/x.svg" },
+    { label: "X", href: "https://x.com/marc_niclas_", icon: "/icons/social/x.svg" },
     {
       label: "Instagram",
       href: "https://www.instagram.com/marc_niclas/",
