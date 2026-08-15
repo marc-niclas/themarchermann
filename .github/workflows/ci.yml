@@ -1,13 +1,18 @@
 name: CI
 
 on:
-  pull_request:
   push:
     branches:
-      - main
+      - "**"
+    paths:
+      - "src/**"
+      - "public/**"
+      - "bun.lock"
+      - "package.json"
+      - ".github/workflows/ci.yml"
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.event.ref }}
   cancel-in-progress: true
 
 jobs:
