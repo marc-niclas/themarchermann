@@ -104,14 +104,14 @@ describe("scroll aware capture", () => {
 });
 
 describe("signature splash resize handling", () => {
-  it("aborts motion into a readable particle-free state on the first viewport change", () => {
+  it("keeps motion running across mobile browser chrome height changes and width jitter", () => {
     const resizeParticles = vi.fn();
     const stopTimeline = vi.fn();
     const revealWords = vi.fn();
     const hideProjectiles = vi.fn();
     const clearParticles = vi.fn();
     const revealAbout = vi.fn();
-    const onResize = createResizeAbortHandler({
+    const onResize = createResizeAbortHandler(393, {
       resizeParticles,
       stopTimeline,
       revealWords,
@@ -120,8 +120,34 @@ describe("signature splash resize handling", () => {
       revealAbout,
     });
 
-    onResize();
-    onResize();
+    onResize(392);
+
+    expect(resizeParticles).toHaveBeenCalledOnce();
+    expect(stopTimeline).not.toHaveBeenCalled();
+    expect(revealWords).not.toHaveBeenCalled();
+    expect(hideProjectiles).not.toHaveBeenCalled();
+    expect(clearParticles).not.toHaveBeenCalled();
+    expect(revealAbout).not.toHaveBeenCalled();
+  });
+
+  it("aborts motion into a readable particle-free state on the first width change", () => {
+    const resizeParticles = vi.fn();
+    const stopTimeline = vi.fn();
+    const revealWords = vi.fn();
+    const hideProjectiles = vi.fn();
+    const clearParticles = vi.fn();
+    const revealAbout = vi.fn();
+    const onResize = createResizeAbortHandler(393, {
+      resizeParticles,
+      stopTimeline,
+      revealWords,
+      hideProjectiles,
+      clearParticles,
+      revealAbout,
+    });
+
+    onResize(852);
+    onResize(852);
 
     expect(resizeParticles).toHaveBeenCalledOnce();
     expect(stopTimeline).toHaveBeenCalledOnce();
